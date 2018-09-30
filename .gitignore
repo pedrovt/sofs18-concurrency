@@ -1,0 +1,8 @@
+# files and folders to black list
+/*
+
+# files and folders to white list
+!.gitignore
+!sofs18
+!README-sofs18.md
+

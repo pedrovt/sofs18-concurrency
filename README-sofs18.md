@@ -46,6 +46,20 @@ make
 
 ******
 
+## Generating documentation
+
+The code is documented in **doxygen**. So, you can easily generate **html** documentation pages.
+
+```
+cd XXXXX/sofs18/doc
+doxygen
+firefox html/index.html &
+```
+
+Of course, you can change firefox by your favourite browser.
+
+******
+
 ## Testing the code
 
 The following sequence of commands, where XXXXX is your project's name, allows you to mount a **sofs** file system
