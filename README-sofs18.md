@@ -74,3 +74,19 @@ mkdir /tmp/mnt                  # our mount point
 Now, everything created inside the mount point will be stored in disk (the /tmp/zzz file). You can use the **showblock** tool to check that out.
 
 ******
+
+## Editable files
+
+When editing your code, take into attention the following:
+
+- Folder **src/work_src** is the only one containing source code to be edited by the groups.
+
+- Only files with termination **.cpp** are to be edited.
+
+- There is a single function per file, with the exception of proposals for internal auxiliary functions in some cases.
+
+- Please do not change the signature of the functions, nor delete the call to the soProbe.
+
+- We assume that only files with termination **.cpp** inside **src/work_src** subfolders are editable by the groups. Thus, any changes to the others can produce indesirable behavior during our tests, since we will use our version of them.
+
+******

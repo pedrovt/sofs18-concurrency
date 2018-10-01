@@ -128,6 +128,7 @@ public:
         catch (const std::out_of_range & err)
         {
             errorMsg("Invalid choice");
+            exit(EXIT_FAILURE);
         }
     }
 };
