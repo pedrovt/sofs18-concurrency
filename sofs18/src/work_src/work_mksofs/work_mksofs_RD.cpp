@@ -24,15 +24,15 @@ namespace sofs18{
             SODirEntry first, second, other;
             // first direntry is filled with "." and points to inode 0
             first.in = 0;
-            first.name = ".";
+            strcpy(first.name, ".");
             // second direntry is filled with ".." and points to inode 0
             second.in = 0;
-            second.name = "..";
+            strcpy(second.name, "..");
             // other entries are empty
             other.in = NullReference;
             // SOFS18_MAX_NAME = 27
-            other.name = "000000000000000000000000000"
-            SODirEntry array[DirentriesPerBlock] = [first, second]; 
+            strcpy(other.name, "000000000000000000000000000");
+            SODirEntry array[DirentriesPerBlock] = {first, second}; 
 
             for (uint32_t i = 2; i < DirentriesPerBlock; i++){
                 array[i] = other;
@@ -46,7 +46,7 @@ namespace sofs18{
             }
 
             return rdsize;
-            //return bin::fillInRootDir(first_block, rdsize);
+            return bin::fillInRootDir(first_block, rdsize);
         }
 
     };
