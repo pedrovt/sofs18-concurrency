@@ -23,8 +23,7 @@ namespace sofs18
         // [in]	ntotal	the total number of blocks in the device
         // [in]	itotal	the total number of inodes
         // [in]	rdsize	initial number of blocks for the root directory
-        void fillInSuperBlock(const char *name, uint32_t ntotal, uint32_t itotal
-                            , uint32_t rdsize)
+        void fillInSuperBlock(const char *name, uint32_t ntotal, uint32_t itotal, uint32_t rdsize)
         {
             soProbe(602, "%s(%s, %u, %u, %u)\n", __FUNCTION__, name, ntotal, 
                     itotal, rdsize);
@@ -70,8 +69,14 @@ namespace sofs18
             // *Physical number of the block where the FILT starts
             sb.filt_start = 1;                          // by definition
 
-            // *Number of blocks that the FILT comprises
-            sb.filt_size = itotal / ReferencesPerBlock;
+            // ?Number of blocks that the FILT comprises
+            sb.filt_size = (itotal / ReferencesPerBlock) + 
+                            ((itotal % ReferencesPerBlock != 0)? 1 : 0);
+            
+            if (myDebug) {
+                printf("\titotal / referencesperblock: %d\n", 
+                        (itotal % ReferencesPerBlock));
+            }
 
             // *First filled FILT position
             sb.filt_head = 0;
@@ -99,9 +104,15 @@ namespace sofs18
             sb.fblt_start = sb.it_start + sb.it_size;   // FBLT starts after
                                                         // the inode table
 
-            // *Number of blocks that the FBLT comprises
-            float remainingLBA = ntotal - sb.fblt_start;
-            sb.fblt_size = ceil(remainingLBA / ReferencesPerBlock);
+            // ?Number of blocks that the FBLT comprises
+            uint32_t remainingLBA = ntotal - sb.fblt_start;
+            printf("\t[PVT/DEBUG] Remaining LBA: %d", remainingLBA);
+            sb.fblt_size = remainingLBA / ReferencesPerBlock + 
+                            ((remainingLBA % ReferencesPerBlock) != 0 ? 1 : 0);
+
+            sb.dz_total = remainingLBA - sb.fblt_size;
+            sb.fblt_size = sb.dz_total / ReferencesPerBlock + 
+                            ((sb.dz_total % ReferencesPerBlock) != 0 ? 1 : 0);
 
             // *First filled FBLT position
             sb.fblt_head = 0; 
