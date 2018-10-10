@@ -12,14 +12,14 @@ namespace sofs18
     namespace work
     {
 
-        u_int32_t roundUp(int numToRound, int multiple){
+        uint32_t roundUp(int numToRound, int multiple){
             if (multiple == 0) return numToRound;
             int remainder = numToRound % multiple;
             if (remainder == 0) return numToRound;
             return numToRound + multiple - remainder;
         }
 
-        u_int32_t roundDown(int numToRound, int multiple){
+        uint32_t roundDown(int numToRound, int multiple){
             if (multiple == 0) return numToRound;
             int remainder = numToRound % multiple;
             if (remainder == 0) return numToRound;
