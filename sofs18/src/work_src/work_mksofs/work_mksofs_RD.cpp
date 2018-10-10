@@ -20,7 +20,6 @@ namespace sofs18{
             soProbe(606, "%s(%u, %u)\n", __FUNCTION__, first_block, rdsize);
             
             /* change the following line by your code */
-
             SODirEntry first, second, other;
             // first direntry is filled with "." and points to inode 0
             first.in = 0;
@@ -31,14 +30,13 @@ namespace sofs18{
             // other entries are empty
             other.in = NullReference;
             // SOFS18_MAX_NAME = 27
-            strcpy(other.name, "000000000000000000000000000");
+            strcpy(other.name, "\0");
             SODirEntry array[DirentriesPerBlock] = {first, second}; 
 
             for (uint32_t i = 2; i < DirentriesPerBlock; i++){
                 array[i] = other;
             }
-
-            for (; first_block < rdsize; first_block++) {
+            for (uint32_t i = 0; i < rdsize; i++) {
                 soWriteRawBlock(first_block, &array);
                 // if second block exists the first and the second direntries are reseted
                 array[0] = other;
@@ -46,7 +44,7 @@ namespace sofs18{
             }
 
             return rdsize;
-            return bin::fillInRootDir(first_block, rdsize);
+            //return bin::fillInRootDir(first_block, rdsize);
         }
 
     };
