@@ -1,9 +1,7 @@
 #include "work_mksofs.h"
-
 #include "rawdisk.h"
 #include "core.h"
 #include "bin_mksofs.h"
-//#include assert
 #include <string.h>
 #include <inttypes.h>
 
@@ -11,28 +9,18 @@ namespace sofs18
 {
     namespace work
     {   
-        // Source: https://stackoverflow.com/questions/8377412/ceil-function-how-can-we-implement-it-ourselves
-        int ceil(float num) {
-            int inum = (int) num;
-            if (num == (float) inum) {
-                return inum;
-            }
-            return inum + 1;
-        }
-        // [in]	name	volume name
-        // [in]	ntotal	the total number of blocks in the device
-        // [in]	itotal	the total number of inodes
-        // [in]	rdsize	initial number of blocks for the root directory
+        
+        // *    -> Tested
+        // ?    -> Under Testing
+        // !    -> Bugs
+        // TODO -> Not implemented
+
         void fillInSuperBlock(const char *name, uint32_t ntotal, uint32_t itotal, uint32_t rdsize)
         {
             soProbe(602, "%s(%s, %u, %u, %u)\n", __FUNCTION__, name, ntotal, 
                     itotal, rdsize);
 
-            // For testing purposes only
-            unsigned char myDebug = 1;
-            if (myDebug) {
-                printf("\t[PVT/DEBUG] Using my version of fillInSuperBlock!\n");
-            }
+            printf("\tUsing work version\n");
 
             // Create SuperBlock
             SOSuperBlock sb;
@@ -49,11 +37,12 @@ namespace sofs18
 
             // *Volume Name
             // Default name
-            if (!name) {
+            if (!name) 
+            {
                 strncpy(sb.name, "sofs18_disk", PARTITION_NAME_SIZE);
             }
             // Verifies if size of the given name is less than 
-            // PARTITION_NAME_SIZE + 1 (terminator)
+            // PARTITION_NAME_SIZE 
             strncpy(sb.name, name, PARTITION_NAME_SIZE);
 
             // *Mount Status
@@ -69,14 +58,9 @@ namespace sofs18
             // *Physical number of the block where the FILT starts
             sb.filt_start = 1;                          // by definition
 
-            // ?Number of blocks that the FILT comprises
+            // *Number of blocks that the FILT comprises
             sb.filt_size = (itotal / ReferencesPerBlock) + 
                             ((itotal % ReferencesPerBlock != 0)? 1 : 0);
-            
-            if (myDebug) {
-                printf("\titotal / referencesperblock: %d\n", 
-                        (itotal % ReferencesPerBlock));
-            }
 
             // *First filled FILT position
             sb.filt_head = 0;
@@ -99,31 +83,26 @@ namespace sofs18
             sb.ifree = itotal - 1;                      // inode of the Root 
                                                         // dir is not free
 
-            /* Free Block List Table (FBLT) --------------------------------- */
+            /* Data Zone & Free Block List Table (FBLT) --------------------- */
             // *Physical number of the block where the FBLT starts
             sb.fblt_start = sb.it_start + sb.it_size;   // FBLT starts after
                                                         // the inode table
 
-            // ?Number of blocks that the FBLT comprises
-            uint32_t remainingLBA = ntotal - sb.fblt_start;
-            printf("\t[PVT/DEBUG] Remaining LBA: %d", remainingLBA);
-            sb.fblt_size = remainingLBA / ReferencesPerBlock + 
-                            ((remainingLBA % ReferencesPerBlock) != 0 ? 1 : 0);
+            // *Number of blocks that in data zone and that the FBLT comprises
+            // First estimate of the number of blocks of the FBLT
+            uint32_t remainingLBA = ntotal - sb.fblt_start - rdsize;
+           
+            sb.fblt_size = remainingLBA / (ReferencesPerBlock + 1) + 
+                    ((remainingLBA % (ReferencesPerBlock + 1) != 0 ? 1 : 0));
 
-            sb.dz_total = remainingLBA - sb.fblt_size;
-            sb.fblt_size = sb.dz_total / ReferencesPerBlock + 
-                            ((sb.dz_total % ReferencesPerBlock) != 0 ? 1 : 0);
+            sb.dz_total = remainingLBA - sb.fblt_size + rdsize;
 
             // *First filled FBLT position
             sb.fblt_head = 0; 
 
-            /* Data Zone (DZ) ----------------------------------------------- */
             // *Physical number of the block where the data zone starts
             sb.dz_start = sb.fblt_start + sb.fblt_size;  // DZ starts after
                                                          // the FBLT
-
-            // *Total number of blocks in data zone
-            sb.dz_total = ntotal - sb.dz_start; 
 
             // *Number of free blocks in data zone
             sb.dz_free = sb.dz_total - rdsize;
