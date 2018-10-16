@@ -66,23 +66,28 @@ namespace sofs18
             }
             soWriteRawBlock(first_block, &inode_table);
             
-            for (uint32_t inode = 0; inode < InodesPerBlock; inode++)
+            printf("%lu, %u, %lu", itotal/InodesPerBlock, itotal, InodesPerBlock);
+            // fill in the rest of the inode table
+            for (uint32_t block = first_block+1; block <= itotal/InodesPerBlock+1; block++)
             {
-              inode_table[inode].mode = INODE_FREE;                  
-              inode_table[inode].lnkcnt = 0;                     
-              inode_table[inode].owner = 0;              
-              inode_table[inode].group = 0;             
-              inode_table[inode].size = 0;   
-              inode_table[inode].blkcnt = 0;            
-              inode_table[inode].atime = inode_table[inode].ctime = inode_table[inode].mtime = 0;              
-              for (int j = 0; j < N_DIRECT; j++) { inode_table[inode].d[j] = NullReference; }
-              for (int j = 0; j < N_INDIRECT; j++) { inode_table[inode].i1[j] = NullReference; }
-              for (int j = 0; j < N_DOUBLE_INDIRECT; j++) { inode_table[inode].i2[j] = NullReference; }
+              for (uint32_t inode = 0; inode < InodesPerBlock; inode++)
+              {
+                inode_table[inode].mode = INODE_FREE;                  
+                inode_table[inode].lnkcnt = 0;                     
+                inode_table[inode].owner = 0;              
+                inode_table[inode].group = 0;             
+                inode_table[inode].size = 0;   
+                inode_table[inode].blkcnt = 0;            
+                inode_table[inode].atime = inode_table[inode].ctime = inode_table[inode].mtime = 0;              
+                for (int j = 0; j < N_DIRECT; j++) { inode_table[inode].d[j] = NullReference; }
+                for (int j = 0; j < N_INDIRECT; j++) { inode_table[inode].i1[j] = NullReference; }
+                for (int j = 0; j < N_DOUBLE_INDIRECT; j++) { inode_table[inode].i2[j] = NullReference; }
+              }
+              
+              // escrita da IT no disco
+              soWriteRawBlock(block, &inode_table);
             }
-            
-            // escrita da IT no disco
-            soWriteRawBlock(first_block+1, &inode_table);
-            
+
             return itotal/InodesPerBlock;
         }
     };
