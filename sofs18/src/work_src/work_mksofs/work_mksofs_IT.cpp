@@ -66,7 +66,6 @@ namespace sofs18
             }
             soWriteRawBlock(first_block, &inode_table);
             
-            printf("%lu, %u, %lu", itotal/InodesPerBlock, itotal, InodesPerBlock);
             // fill in the rest of the inode table
             for (uint32_t block = first_block+1; block <= itotal/InodesPerBlock+1; block++)
             {
