@@ -29,17 +29,14 @@ namespace sofs18
             // operations over the superblock
             // change free inodes
             // change free inode table
-            SOSuperBlock *spb_pointer = soSBGetPointer();  // get superblock pointer
-            if (spb_pointer->ifree < spb_pointer->itotal-1) { spb_pointer->ifree++; }
-            else {return;}
-            spb_pointer->iicache.ref[spb_pointer->iicache.idx++] = in;
-            //spb_pointer->iicache.idx++;                    // increase insertion cache index
-            soSBSave();                                    // saves the block
+            SOSuperBlock *spb_pointer = soSBGetPointer();                                                             // get superblock pointer
+            spb_pointer->ifree++;                                                                                     // increase amount of free inodes
+            if (spb_pointer->iicache.ref[INODE_REFERENCE_CACHE_SIZE-1] != NullReference) {soDepleteIICache();}        // check if inode insertion cache is full, depletes if it is
+            spb_pointer->iicache.ref[spb_pointer->iicache.idx++] = in;                                                // puts inode ref in insertion cache and increase its index
+            soSBSave();                                                                                               // save SuperBlock                                   
 
             int inode = soITOpenInode(in);                            // get Inode handler (int)
             SOInode *inode2free = soITGetInodePointer(inode);         // get pointer to Inode(SOInode *)
-
-            spb_pointer->filt_tail = 0;
 
             // free Inode
             inode2free->mode = INODE_FREE;                  
