@@ -42,11 +42,15 @@ namespace sofs18
 					}	
 				}
 				soWriteRawBlock(last_block, &block);
-			}else {
+			}
+			else {
 				for(uint32_t i=0; i < ReferencesPerBlock; i++) {
 					block[i] = last_reference_number++;	
 				}
 				soWriteRawBlock(last_block, &block);	
+			}
+			else{
+				exit(1);
 			}
 			return n_blocks;
 			//return bin::fillInFreeBlockListTable(first_block, btotal, rdsize);
