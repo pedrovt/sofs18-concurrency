@@ -25,11 +25,13 @@ namespace sofs18
         void soFreeDataBlock(uint32_t bn)
         {
             soProbe(442, "%s(%u)\n", __FUNCTION__, bn);
-
-            /* change the following line by your code */
-            bin::soFreeDataBlock(bn);
+            
+            SOSuperBlock *spb_pointer = soSBGetPointer();
+            spb_pointer->dz_free++;
+            if (spb_pointer->bicache.ref[BLOCK_REFERENCE_CACHE_SIZE-1] != NullReference) {soDepleteBICache();}
+            spb_pointer->bicache.ref[spb_pointer->bicache.idx++] = bn;
+            soSBSave();
         }
-
     };
 
 };

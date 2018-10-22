@@ -3,6 +3,8 @@
 #
 BOLD_BLUE="\033[1;34m"
 BOLD_RED="\033[1;31m"
+BOLD_GREEN="\033[1;32m"
+REGULAR="\033[1;37m"
 
 function fill_all_inodes 
 {
@@ -18,15 +20,51 @@ function fill_all_inodes
 function check_bin_free_block 
 {
   DISK_NAME=$1
-  
+  FREES=31
+ 
+  ./mksofs $DISK_NAME > iol
+
+  while [ $FREES -gt 0 ] 
+  do
+    let FREES--
+    echo -e "api\n400\n700\nabi\n400\n700\nfdb\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 > iol
+  done
+
   echo -e -n $BOLD_BLUE
   echo -e "Showing what diffs in dal calls between teacher and yours:"
   echo -e -n $BOLD_RED
   echo "Teacher:"
-  echo -e "api\n400\n700\nabi\n400\n700\nfdb\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Inode .*//g'
+  echo -e "api\n400\n700\nabi\n400\n700\nfdb\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Data .*//g'
+  ./showblock $DISK_NAME > t.txt
   echo -e -n $BOLD_BLUE
+ 
+  ./mksofs $DISK_NAME > iol
+  
+  let FREES=31
+  while [ $FREES -gt 0 ] 
+  do
+    let FREES--
+    echo -e "api\n400\n700\nabi\n400\n700\nfdb\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 > iol
+  done
+  rm iol
+ 
   echo "Yours:"
-  echo -e "api\n400\n700\nfi\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Inode .*//g'
+  echo -e "api\n400\n700\nfdb\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Data .*//g'
+  ./showblock $DISK_NAME > m.txt
+
+  echo -e "Diffs in superblock struct:"
+  diff t.txt m.txt > a
+  if [ -s a ]
+  then
+    echo -e -n $BOLD_RED
+    echo -e "Yeah...\nYou fucked up here:"
+    echo -e -n $REGULAR
+    cat a
+  else
+    echo -e -n $BOLD_GREEN
+    echo -e "None! It is possible that you didn't fuck up!!!"
+  fi
+  rm t.txt m.txt a
 }
 
 function check_bin_free_inode 
@@ -46,7 +84,8 @@ function check_bin_free_inode
   echo -e "Showing what diffs in dal calls between teacher and yours:"
   echo -e -n $BOLD_RED
   echo "Teacher:"
-  echo -e "api\n400\n700\nabi\n400\n700\nfi\n1\nrpi\n400\n700\nsb\ns\n0\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Inode .*//g'
+  echo -e "api\n400\n700\nabi\n400\n700\nfi\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Inode .*//g'
+  ./showblock $DISK_NAME > t.txt
   echo -e -n $BOLD_BLUE
  
   ./mksofs $DISK_NAME > iol
@@ -60,7 +99,22 @@ function check_bin_free_inode
   rm iol
  
   echo "Yours:"
-  echo -e "api\n400\n700\nfi\n1\nrpi\n400\n700\nsb\ns\n0\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Inode .*//g'
+  echo -e "api\n400\n700\nfi\n1\nrpi\n400\n700\nq\n" | ./testtool $DISK_NAME -q1 | sed -e 's/Inode .*//g'
+  ./showblock $DISK_NAME > m.txt
+
+  echo -e "Diffs in superblock struct:"
+  diff t.txt m.txt > a
+  if [ -s a ]
+  then
+    echo -e -n $BOLD_RED
+    echo -e "Yeah...\n You fucked up here:"
+    echo -e -n $REGULAR
+    cat a
+  else
+    echo -e -n $BOLD_GREEN
+    echo -e "None! It is possible that you didn't fuck up!!!"
+  fi
+  rm t.txt m.txt a
 }
 
 case $1 in
@@ -80,7 +134,7 @@ case $1 in
     echo -e "Usage: ./func_test.sh [OPTIION] DISK_NAME [VALUES]"
     echo -e "\tOPTIONS:"
     echo -e "\t\t-bfi   --- check calls difference in free_inode with teacher version"
-    echo -e "\t\t-bfd   --- check calls difference in free_block with teacher version"
+    echo -e "\t\t-bfb   --- check calls difference in free_block with teacher version"
     echo -e "\t\t-fi VAL --- fills all inodes in given value"
     exit 1
 
