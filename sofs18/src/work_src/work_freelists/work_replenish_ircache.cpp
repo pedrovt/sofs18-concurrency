@@ -118,6 +118,7 @@ namespace sofs18
                 // Update counters
                 ircache.idx = posCache;
                 sb -> filt_head += INODE_REFERENCE_CACHE_SIZE - iicache.idx;
+                // todo update iicache idx
             }
             
             else {
