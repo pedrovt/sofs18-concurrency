@@ -31,7 +31,7 @@ namespace sofs18
             // change free inode table
             SOSuperBlock *spb_pointer = soSBGetPointer();                                                             // get superblock pointer
             spb_pointer->ifree++;                                                                                     // increase amount of free inodes
-            if (spb_pointer->iicache.ref[INODE_REFERENCE_CACHE_SIZE-1] != NullReference) {soDepleteIICache();}        // check if inode insertion cache is full, depletes if it is
+            if (spb_pointer->iicache.ref[INODE_REFERENCE_CACHE_SIZE-1] != NullReference) {sofs18::soDepleteIICache();}        // check if inode insertion cache is full, depletes if it is
             spb_pointer->iicache.ref[spb_pointer->iicache.idx++] = in;                                                // puts inode ref in insertion cache and increase its index
             soSBSave();                                                                                               // save SuperBlock                                   
 

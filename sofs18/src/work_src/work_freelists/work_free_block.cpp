@@ -28,7 +28,7 @@ namespace sofs18
             
             SOSuperBlock *spb_pointer = soSBGetPointer();
             spb_pointer->dz_free++;
-            if (spb_pointer->bicache.ref[BLOCK_REFERENCE_CACHE_SIZE-1] != NullReference) {soDepleteBICache();}
+            if (spb_pointer->bicache.ref[BLOCK_REFERENCE_CACHE_SIZE-1] != NullReference) {sofs18::soDepleteBICache();}
             spb_pointer->bicache.ref[spb_pointer->bicache.idx++] = bn;
             soSBSave();
         }
