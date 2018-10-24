@@ -49,9 +49,7 @@ namespace sofs18
 				}
 				soWriteRawBlock(last_block, &block);	
 			}
-			else{
-				exit(1);
-			}
+			
 			return n_blocks;
 			//return bin::fillInFreeBlockListTable(first_block, btotal, rdsize);
 			

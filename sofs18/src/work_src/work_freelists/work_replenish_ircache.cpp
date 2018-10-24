@@ -124,7 +124,7 @@ namespace sofs18
             else {
                 // INTERNAL ERROR. Should not happen!
                 printf("Internal Error in Replenish ircache!");
-                exit(1);
+//                exit(1);
             }
 
             soFILTSaveBlock();
