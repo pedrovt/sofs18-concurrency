@@ -20,16 +20,23 @@ namespace sofs18
             printf("\tUsing work version\n");
 
             /* verify sanity of arguments */
-            if (!name) {
+            if (!name) 
+            {
                 throw SOException(EINVAL, __FUNCTION__);
             } 
 
-            if (strlen(name) > SOFS18_MAX_NAME) {
+            if (strlen(name) > SOFS18_MAX_NAME) 
+            {
                 throw SOException(ENAMETOOLONG, __FUNCTION__);
             }
 
-            // todo verify sanity of number of the inode??
-            // if (cin < 0 || cin > numInodes)
+            /* no need to verify sanity of number of the inode. 
+             * done by the syscall (which means it won't be validated
+             * when invoking this function using testtool script)
+             * if needed, this function would need another argument,
+             * to make possible obtaning the superblock and therefore
+             * the maximum value of cin (<=> number of inodes)
+             */
 
             /* get inode of the directory */
             SOInode* inode = soITGetInodePointer(pih);
@@ -41,27 +48,33 @@ namespace sofs18
             /* number and position in the block of the first free entry */
             int numFreeBlock = -1;
             int posFreeBlock = -1;
+            
+            /* block which will be written in the end */
+            SODirEntry entries[DirentriesPerBlock];
 
             /* for each block with the directory contents */
-            for (uint32_t i = 0; i < numBlocks; i++) {
+            for (uint32_t i = 0; i < numBlocks; i++) 
+            {
                 /* read data block */
-                SODirEntry entries[DirentriesPerBlock];
-                soReadFileBlock(pih, i, entries);
+                SODirEntry currentBlockEntries[DirentriesPerBlock];
+                soReadFileBlock(pih, i, currentBlockEntries);
 
                 /* verify if there's a free position in the block */
-                for (uint32_t j = 0; j < DirentriesPerBlock; j++) {
-                    SODirEntry entry = entries[i];
+                for (uint32_t j = 0; j < DirentriesPerBlock; j++) 
+                {
+                    SODirEntry entry = currentBlockEntries[i];
 
-                    /* found free position */ 
-                    if (numFreeBlock == -1 && entry.in == 0) {
-                        printf("\tFree position at block %d, pos %d", i, j);
+                    /* found free position */
+                    if (numFreeBlock == -1 && entry.in == NullReference)   // TODO tell profs about the error 
+                    {
                         numFreeBlock = i;
                         posFreeBlock = j;
-                        // todo consider optimization of copying the entries array
+                        memcpy(entries, currentBlockEntries, BlockSize);
                     }
 
                     /* can't have repeated file names in the same dir! */
-                    else if (strcmp(name, entry.name) == 0) {
+                    else if (strcmp(name, entry.name) == 0) 
+                    {
                         throw SOException(EEXIST, __FUNCTION__);
                         /* Tested binary version. 
                          * The file system is not case sensitive, 
@@ -78,10 +91,11 @@ namespace sofs18
             strcpy(entry.name, name);
 
             /* no free position was found -> write a new file block */
-            if (numFreeBlock == -1) {
+            if (numFreeBlock == -1)
+            {
+                printf("\n\tNo free position! Allocating block %d\n", numBlocks);
                 /* create new block contents */
-                SODirEntry entries[DirentriesPerBlock];
-
+                
                 // first position has the new entry
                 entries[0] = entry;
 
@@ -99,9 +113,10 @@ namespace sofs18
             }
 
             /* free position was found */
-            else {
-                SODirEntry entries[DirentriesPerBlock];
-                soReadFileBlock(pih, numFreeBlock, entries);
+            else 
+            {
+                printf("\n\tUsing free position at block %d, pos %d\n", numFreeBlock, posFreeBlock);
+
                 entries[posFreeBlock] = entry;
                 soWriteFileBlock(pih, numFreeBlock, entries); 
             }
