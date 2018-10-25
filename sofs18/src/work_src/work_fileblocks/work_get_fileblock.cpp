@@ -16,7 +16,8 @@ namespace sofs18
         /* ********************************************************* */
         static uint32_t soGetIndirectFileBlock(SOInode * ip, uint32_t fbn);
         static uint32_t soGetDoubleIndirectFileBlock(SOInode * ip, uint32_t fbn);
-        static uint32_t maxFBN = N_DOUBLE_INDIRECT * pow(ReferencesPerBlock, N_DOUBLE_INDIRECT) + N_INDIRECT * ReferencesPerBlock + N_DIRECT;
+        static uint32_t powerOfRefPerBlock = ReferencesPerBlock * ReferencesPerBlock;
+        static uint32_t maxFBN = N_DOUBLE_INDIRECT * powerOfRefPerBlock + N_INDIRECT * ReferencesPerBlock + N_DIRECT;
         /* ********************************************************* */
         // *    -> Tested
         // ?    -> Under Testing
@@ -95,8 +96,6 @@ namespace sofs18
         {
             soProbe(301, "%s(%d, ...)\n", __FUNCTION__, afbn);
             printf("\tDouble Indirect.\n\t\tTrying to find i2 index %d\n", afbn);
-
-            static uint32_t powerOfRefPerBlock = ReferencesPerBlock *ReferencesPerBlock;
 
             /* get double indirect index (i2[0] or i2[1]?) */
             uint32_t iiIndex = afbn / (N_DOUBLE_INDIRECT * powerOfRefPerBlock);

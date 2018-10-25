@@ -17,6 +17,7 @@ namespace sofs18
         void soAddDirEntry(int pih, const char *name, uint32_t cin)
         {
             soProbe(202, "%s(%d, %s, %u)\n", __FUNCTION__, pih, name, cin);
+            printf("\tUsing work version\n");
 
             /* verify sanity of arguments */
             if (!name) {
@@ -35,7 +36,8 @@ namespace sofs18
 
             /* get number of blocks associated to the dir */ 
             uint32_t numBlocks = (inode->size) / BlockSize;
-            
+            printf("\tNumber of blocks: %d", numBlocks);
+
             /* number and position in the block of the first free entry */
             int numFreeBlock = -1;
             int posFreeBlock = -1;
@@ -51,7 +53,7 @@ namespace sofs18
                     SODirEntry entry = entries[i];
 
                     /* found free position */ 
-                    if (numFreeBlock == -1 && entry.in == NullReference) {
+                    if (numFreeBlock == -1 && entry.in == 0) {
                         printf("\tFree position at block %d, pos %d", i, j);
                         numFreeBlock = i;
                         posFreeBlock = j;
