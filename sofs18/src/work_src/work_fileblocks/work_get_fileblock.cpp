@@ -30,9 +30,9 @@ namespace sofs18
             printf("\tTrying to find block %d\n", fbn);
 
             /* verify sanity of given file block number */
-            if (fbn < 0 || fbn > maxFBN)
+            if (fbn > maxFBN)
             {
-                throw SOException(EINVAL, __FUNCTION__);
+                throw SOException(EINVAL, __FUNCTION__);    //EINVAL checked with bin version
             }
 
             SOInode* inode = soITGetInodePointer(ih);
@@ -44,15 +44,15 @@ namespace sofs18
             }
 
             /* indirect (i1) */
-            uint32_t maxIndirectIndex = N_INDIRECT * ReferencesPerBlock + N_DIRECT - 1;
+            uint32_t maxIndirectIndex = N_INDIRECT * ReferencesPerBlock + N_DIRECT;
             if (fbn < maxIndirectIndex) {
                 return soGetIndirectFileBlock(inode, fbn - N_DIRECT);
             }
 
             /* double indirect (i2) */
-            else if (fbn < ReferencesPerBlock * ReferencesPerBlock + maxIndirectIndex)
+            else if (fbn < N_DOUBLE_INDIRECT * ReferencesPerBlock * ReferencesPerBlock + maxIndirectIndex)
             {
-                return soGetDoubleIndirectFileBlock(inode, fbn - N_INDIRECT * ReferencesPerBlock - N_DIRECT);
+                return soGetDoubleIndirectFileBlock(inode, fbn - maxIndirectIndex);
             }
             
             /* error */
@@ -75,8 +75,9 @@ namespace sofs18
             uint32_t i1Index = afbn / ReferencesPerBlock;
             printf("\t\ti1Index = %d\n", i1Index);
 
-            // !bug
-            uint32_t* i1;
+            // todo verify if it's null reference
+            
+            uint32_t i1[ReferencesPerBlock];
             soReadDataBlock(ip->i1[i1Index], i1);
             
             int i1Pos = afbn % ReferencesPerBlock;
@@ -104,9 +105,15 @@ namespace sofs18
             /* get position in i2[0]/i2[1] */
             uint32_t iiPos = afbn % (N_DOUBLE_INDIRECT * powerOfRefPerBlock);
             printf("\t\tiiPos = %d\n", iiPos);
+            
+            // todo verify if i2[0]/i2[1] is null */
 
+            printf("\t\tafbn before = %d\n", afbn);
+            afbn = afbn / ReferencesPerBlock;
+            printf("\t\tafbn after = %d\n", afbn);
+ 
             /* get index in the indirect referencing array */
-            uint32_t iIndex = afbn / (ReferencesPerBlock);
+            uint32_t iIndex = afbn / (ReferencesPerBlock);      // <- I THINK THIS IS THE PROBLEM
             printf("\t\tiIndex = %d\n", iIndex);
 
             /* get position in the indirect referencing array */
@@ -115,28 +122,19 @@ namespace sofs18
 
             /* retrieve block */
             
-            uint32_t* i2;        // retrieve i2[0]/i2[1]
-            soReadDataBlock(ip->i2[iiIndex], i2);   // * ok
+            uint32_t i2[ReferencesPerBlock * ReferencesPerBlock];   // retrieve i2[0]/i2[1]
+            soReadDataBlock(ip->i2[iiIndex], i2);   
 
             //!bug
-            uint32_t *i2_array;  // retrieve position in i2 -> indirect
+            uint32_t i2_array[ReferencesPerBlock];  // retrieve position in i2 -> indirect
             soReadDataBlock(i2[iiPos], i2_array); //referencing array
                                                     //! error
 
-            uint32_t* i2_i1;    // retrieve position in the previous array
+            uint32_t i2_i1[ReferencesPerBlock];    // retrieve position in the previous array
             soReadDataBlock(i2_array[iIndex], i2_i1);
                                                     //!error
             
-
-            return (i2_i1[iPos]);
-
-            /* get position in selected i2 */
-            //uint32_t iIndex_Index = afbn % ReferencesPerBlock;
-            //printf("\t\tiIndex_Index= %d\n", iIndex_Index);
-
-            //uint32_t i1Pos = iIndex_Index / ReferencesPerBlock;
-            //printf("\t\tpos= %d\n", i1Pos);
-            //return i1[];
+            return i2_i1[iPos];
 
             /* original version */
             //throw SOException(ENOSYS, __FUNCTION__); 
