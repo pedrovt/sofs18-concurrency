@@ -99,6 +99,7 @@ public:
         /* inodeattr functions */
         hdl["cia"] = checkInodeAccess;
         hdl["sia"] = setInodeAccess;
+        hdl["sis"] = setInodeSize;
         hdl["iil"] = incInodeLnkcnt;
         hdl["dil"] = decInodeLnkcnt;
         hdl["iilc"] = incInodeLnkcnt;
@@ -128,7 +129,7 @@ public:
         catch (const std::out_of_range & err)
         {
             errorMsg("Invalid choice");
-            exit(EXIT_FAILURE);
+            if (quiet > 0) exit(EXIT_FAILURE);
         }
     }
 };
@@ -173,7 +174,7 @@ public:
              "+---------------------------------------+---------------------------------------+\n"
              "| cia [555] - Check Inode Access        | sia       - Set Inode Access          +\n"
              "| iil       - Increment Inode Lnkcnt    | dil       - Decrement Inode Lnkcnt    +\n"
-             "| cog       - Change Owner and Group    |                                       +\n"
+             "| cog       - Change Owner and Group    | sis       - Set Inode Size            +\n"
              "+===============================================================================+\n");
     }
 
@@ -325,7 +326,7 @@ int main(int argc, char *argv[])
     catch(SOException & err)
     {
         errnoMsg(err.en, err.msg);
-        //return EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
 
     /* process the command */

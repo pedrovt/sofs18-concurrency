@@ -45,6 +45,35 @@ namespace sofs18
     /* ******************************************************************* */
 
     /**
+     *  \brief Create a regular file with size 0.
+     *
+     *  It tries to emulate <em>mknod</em> system call, for regular files.
+     *
+     *  To get more information, execute in a terminal the command <b><tt>man 2 mknod</tt></b>
+     *
+     *  \param path path to the file
+     *  \param mode permissions to be set
+     *
+     *  \remarks
+     *  - \c mode must be a bitwise combination of S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, 
+     *          S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH
+     *  - \c path must not exist
+     *  - \c dirname(path) must exist, be a directory, and the user must have write permission
+     *          on it
+     *  
+     *  - <b>In case of success</b>
+     *    - An inode is allocated for the new regular file
+     *    - A \c direntry named \c basename(path) is added to \c dirname(path)
+     *    - \c lnkcnt of the inode associated to \c basename(path) is updated accordingly
+     *
+     *  \return 0 on success; 
+     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     */
+    int soMknod(const char *path, mode_t mode);
+
+    /* ******************************************************************* */
+
+    /**
      *  \brief Make a new link to a file.
      *
      *  It tries to emulate <em>link</em> system call.
@@ -53,6 +82,16 @@ namespace sofs18
      *
      *  \param path path to an existing file
      *  \param newPath new path to the same file
+     *
+     *  \remarks
+     *  - \c path must represent an existing regular file or symbolic link
+     *  - \c newPath must not exist
+     *  - \c dirname(newPath) must exist, be a directory, and the user must have write permission
+     *          on it
+     *  
+     *  - <b>In case of success</b>
+     *    - A \c direntry named \c basename(newPath) is added to \c dirname(newPath)
+     *    - \c lnkcnt of the inode associated to path is updated accordingly
      *
      *  \return 0 on success; 
      *      -errno in case of error, being errno the system error that better represents the cause of failure
@@ -70,6 +109,17 @@ namespace sofs18
      *
      *  \param path path to the file to be deleted
      *
+     *  \remarks
+     *  - \c path must represent an existing regular file or symbolic link
+     *  - \c The user must have write permission to \c dirname(path)
+     *  
+     *  - <b>In case of success</b>
+     *    - A \c direntry in \c dirname(path) is deleted
+     *    - \c lnkcnt of the inode associated to path is updated accordingly
+     *    - If that \c lnkcnt become zero:
+     *      - All data blocks associated to that inode are freed
+     *      - The inode itself is freed
+     *
      *  \return 0 on success; 
      *      -errno in case of error, being errno the system error that better represents the cause of failure
      */
@@ -78,38 +128,58 @@ namespace sofs18
     /* ******************************************************************* */
 
     /**
-     *  \brief Change the name or the location of a file in the directory hierarchy of the file system.
+     *  \brief Create a directory.
      *
-     *  It tries to emulate <em>rename</em> system call.
+     *  It tries to emulate <em>mkdir</em> system call.
      *
-     *  To get more information, execute in a terminal the command <b><tt>man 2 rename</tt></b>
+     *  To get more information, execute in a terminal the command <b><tt>man 2 mkdir</tt></b>
      *
-     *  \param path path to an existing file
-     *  \param newPath new path to the same file in replacement of the old one
+     *  \param path path to the file
+     *  \param mode permissions to be set
+     *          
+     *  \remarks
+     *  - \c mode must be a bitwise combination of S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, 
+     *          S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH
+     *  - \c path must not exist
+     *  - \c dirname(path) must exist, be a directory, and the user must have write permission
+     *          on it
+     *  
+     *  - <b>In case of success</b>
+     *    - An inode is allocated for the new (child) directory
+     *    - The \c direntries named \c . and \c .. are added to the child directory
+     *    - A \c direntry named \c basename(path) is added to the parent directory
+     *    - \c lnkcnt of parent and child directories are updated accordingly
      *
      *  \return 0 on success; 
      *      -errno in case of error, being errno the system error that better represents the cause of failure
      */
-    int soRename(const char *path, const char *newPath);
+    int soMkdir(const char *path, mode_t mode);
 
     /* ******************************************************************* */
 
     /**
-     *  \brief Create a regular file with size 0.
+     *  \brief Remove an existing directory.
      *
-     *  It tries to emulate <em>mknod</em> system call.
+     *  It tries to emulate <em>rmdir</em> system call.
      *
-     *  To get more information, execute in a terminal the command <b><tt>man 2 mknod</tt></b>
+     *  To get more information, execute in a terminal the command <b><tt>man 2 rmdir</tt></b>
      *
-     *  \param path path to the file
-     *  \param mode type and permissions to be set:
-     *                    a bitwise combination of S_IFREG, S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH,
-     *                    S_IWOTH, S_IXOTH
+     *  \param path path to the directory to be deleted
+     *
+     *  \remarks
+     *  - \c path must represent an existing directory, that must be empty
+     *  - \c The user must have write permission to \c dirname(path)
+     *  
+     *  - <b>In case of success</b>
+     *    - All data blocks associated to the deleted (child) directory are freed
+     *    - The inode of the child directory is freed
+     *    - A \c direntry of the parent directory is deleted
+     *    - \c lnkcnt of the parent directory is updated accordingly
      *
      *  \return 0 on success; 
      *      -errno in case of error, being errno the system error that better represents the cause of failure
      */
-    int soMknod(const char *path, mode_t mode);
+    int soRmdir(const char *path);
 
     /* ******************************************************************* */
 
@@ -124,6 +194,12 @@ namespace sofs18
      *  \param buff pointer to the buffer where data to be read is to be stored
      *  \param count number of bytes to be read
      *  \param pos starting [byte] position in the file data continuum where data is to be read from
+     *
+     *  \remarks
+     *  - \c The user must have read access to \c path
+     *
+     *  - <b>In case of success</b>
+     *    - In terms of internal structure, only \c atime is updated
      *
      *  \return the number of bytes read, on success; 
      *      -errno in case of error, being errno the system error that better represents the cause of failure
@@ -144,10 +220,36 @@ namespace sofs18
      *  \param count number of bytes to be written
      *  \param pos starting [byte] position in the file data continuum where data is to be written into
      *
+     *  \remarks
+     *  - \c The user must have write access to \c path
+     *
+     *  - <b>In case of success</b>
+     *    - Some data blocks of the associated inode can be updated
+     *    - Some new data blocks can be associated to the inode
+     *    - Field \c size of the inode can be updated 
+     *
      *  \return the number of bytes written, on success; 
      *      -errno in case of error, being errno the system error that better represents the cause of failure
      */
     int soWrite(const char *path, void *buff, uint32_t count, int32_t pos);
+
+    /* ******************************************************************* */
+    /* ******************************************************************* */
+
+    /**
+     *  \brief Change the name or the location of a file in the directory hierarchy of the file system.
+     *
+     *  It tries to emulate <em>rename</em> system call.
+     *
+     *  To get more information, execute in a terminal the command <b><tt>man 2 rename</tt></b>
+     *
+     *  \param path path to an existing file
+     *  \param newPath new path to the same file in replacement of the old one
+     *
+     *  \return 0 on success; 
+     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     */
+    int soRename(const char *path, const char *newPath);
 
     /* ******************************************************************* */
 
@@ -165,42 +267,6 @@ namespace sofs18
      *      -errno in case of error, being errno the system error that better represents the cause of failure
      */
     int soTruncate(const char *path, off_t length);
-
-    /* ******************************************************************* */
-
-    /**
-     *  \brief Create a directory.
-     *
-     *  It tries to emulate <em>mkdir</em> system call.
-     *
-     *  To get more information, execute in a terminal the command <b><tt>man 2 mkdir</tt></b>
-     *
-     *  \param path path to the file
-     *  \param mode permissions to be set:
-     *          a bitwise combination of S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH
-     *
-     *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
-     */
-    int soMkdir(const char *path, mode_t mode);
-
-    /* ******************************************************************* */
-
-    /**
-     *  \brief Delete a directory.
-     *
-     *  It tries to emulate <em>rmdir</em> system call.
-     *  
-     *  The directory should be empty, ie. only containing the '.' and '..' entries.
-     *
-     *  To get more information, execute in a terminal the command <b><tt>man 2 rmdir</tt></b>
-     *
-     *  \param path path to the directory to be deleted
-     *
-     *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
-     */
-    int soRmdir(const char *path);
 
     /* ******************************************************************* */
 
