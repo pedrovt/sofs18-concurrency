@@ -57,17 +57,18 @@ namespace sofs18
      *  \remarks
      *  - \c mode must be a bitwise combination of S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, 
      *          S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH
-     *  - \c path must not exist
-     *  - \c dirname(path) must exist, be a directory, and the user must have write permission
-     *          on it
+     *  - \c dirname(path) must exist, be a directory, and write permission on it is required
+     *  - \c basename(path) must not exist within \c dirname(path)
      *  
      *  - <b>In case of success</b>
      *    - An inode is allocated for the new regular file
      *    - A \c direntry named \c basename(path) is added to \c dirname(path)
-     *    - \c lnkcnt of the inode associated to \c basename(path) is updated accordingly
+     *    - \c lnkcnt of the inode associated to \c basename(path) is updated in order
+     *          to include the new incoming arc
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error, 
+     *      being errno the system error that better represents the cause of failure
      */
     int soMknod(const char *path, mode_t mode);
 
@@ -85,16 +86,17 @@ namespace sofs18
      *
      *  \remarks
      *  - \c path must represent an existing regular file or symbolic link
-     *  - \c newPath must not exist
-     *  - \c dirname(newPath) must exist, be a directory, and the user must have write permission
-     *          on it
+     *  - \c dirname(newPath) must exist, be a directory, and write permission on it is required
+     *  - \c basename(newPath) must not exist within \c dirname(newPath)
      *  
      *  - <b>In case of success</b>
      *    - A \c direntry named \c basename(newPath) is added to \c dirname(newPath)
-     *    - \c lnkcnt of the inode associated to path is updated accordingly
+     *    - Field \c lnkcnt of the inode associated to \c basename(path) is updated in order
+     *          to include with the new incoming arc
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error, 
+     *      being errno the system error that better represents the cause of failure
      */
     int soLink(const char *path, const char *newPath);
 
@@ -110,18 +112,21 @@ namespace sofs18
      *  \param path path to the file to be deleted
      *
      *  \remarks
-     *  - \c path must represent an existing regular file or symbolic link
-     *  - \c The user must have write permission to \c dirname(path)
+     *  - \c dirname(path) must exist, be a directory, and write permission on it is required
+     *  - \c basename(path) must exist within \c dirname(path) 
+     *          and must be a regular file or symbolic link
      *  
      *  - <b>In case of success</b>
-     *    - A \c direntry in \c dirname(path) is deleted
-     *    - \c lnkcnt of the inode associated to path is updated accordingly
-     *    - If that \c lnkcnt become zero:
+     *    - The \c direntry named \c basename(path) is deleted from \c dirname(path)
+     *    - \c lnkcnt of the inode associated to \c path is updated in order to exclude 
+     *          the deleted incoming arc
+     *    - If after that \c lnkcnt become zero:
      *      - All data blocks associated to that inode are freed
      *      - The inode itself is freed
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soUnlink(const char *path);
 
@@ -140,18 +145,21 @@ namespace sofs18
      *  \remarks
      *  - \c mode must be a bitwise combination of S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, 
      *          S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH
-     *  - \c path must not exist
-     *  - \c dirname(path) must exist, be a directory, and the user must have write permission
-     *          on it
+     *  - \c dirname(path) must exist, be a directory, and write permission on it is required
+     *  - \c base(path) must not exist within \c dirname(path)
      *  
      *  - <b>In case of success</b>
      *    - An inode is allocated for the new (child) directory
-     *    - The \c direntries named \c . and \c .. are added to the child directory
-     *    - A \c direntry named \c basename(path) is added to the parent directory
-     *    - \c lnkcnt of parent and child directories are updated accordingly
+     *    - The \c direntries named \c . and \c .. are added to the child directory and,
+     *          as a consequence, a data block is added, \c blkcnt is set to 1,
+     *          and size is set to \c BlockSize
+     *    - A \c direntry named \c basename(path) is added to \c dirname(path)
+     *    - \c lnkcnt of parent and child directories are updated in order to include
+     *          the new incoming arcs
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soMkdir(const char *path, mode_t mode);
 
@@ -167,17 +175,19 @@ namespace sofs18
      *  \param path path to the directory to be deleted
      *
      *  \remarks
-     *  - \c path must represent an existing directory, that must be empty
-     *  - \c The user must have write permission to \c dirname(path)
+     *  - \c dirname(path) must exist, be a directory, and write permission on it is required
+     *  - \c basename(path) must exist within \c dirname(path), be a directory and be empty
      *  
      *  - <b>In case of success</b>
      *    - All data blocks associated to the deleted (child) directory are freed
      *    - The inode of the child directory is freed
-     *    - A \c direntry of the parent directory is deleted
-     *    - \c lnkcnt of the parent directory is updated accordingly
+     *    - The \c direntry named \c basename(path) is deleted from \c dirname(path)
+     *    - \c lnkcnt of the inode associated to \c basename(path) is updated in order to exclude 
+     *          the deleted incoming arc
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soRmdir(const char *path);
 
@@ -196,13 +206,14 @@ namespace sofs18
      *  \param pos starting [byte] position in the file data continuum where data is to be read from
      *
      *  \remarks
-     *  - \c The user must have read access to \c path
+     *  - The user must have read permission to the inode associated with \c path
      *
      *  - <b>In case of success</b>
-     *    - In terms of internal structure, only \c atime is updated
+     *    - In terms of the disk internal structure, only \c atime is updated
      *
      *  \return the number of bytes read, on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soRead(const char *path, void *buff, uint32_t count, int32_t pos);
 
@@ -221,19 +232,31 @@ namespace sofs18
      *  \param pos starting [byte] position in the file data continuum where data is to be written into
      *
      *  \remarks
-     *  - \c The user must have write access to \c path
+     *  - The user must have write permission to the inode associated with \c path
      *
      *  - <b>In case of success</b>
      *    - Some data blocks of the associated inode can be updated
-     *    - Some new data blocks can be associated to the inode
+     *    - Some new data blocks can be associated to the inode, in which case \c blkcnt 
+     *          is updated
      *    - Field \c size of the inode can be updated 
      *
      *  \return the number of bytes written, on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soWrite(const char *path, void *buff, uint32_t count, int32_t pos);
 
     /* ******************************************************************* */
+
+    /* ******************************************************************* */
+    /** @} close group main_syscalls */
+    /** 
+     * \defgroup secondary_syscalls secondary syscalls
+     * \brief Secondary system calls
+     * @{ 
+     */
+    /* ******************************************************************* */
+
     /* ******************************************************************* */
 
     /**
@@ -247,7 +270,8 @@ namespace sofs18
      *  \param newPath new path to the same file in replacement of the old one
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soRename(const char *path, const char *newPath);
 
@@ -264,7 +288,8 @@ namespace sofs18
      *  \param length new size for the regular size
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soTruncate(const char *path, off_t length);
 
@@ -310,7 +335,8 @@ namespace sofs18
      *  \param path path to the symbolic link to be created
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soSymlink(const char *effPath, const char *path);
 
@@ -328,7 +354,8 @@ namespace sofs18
      *  \param size buffer size in bytes
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soReadlink(const char *path, char *buff, size_t size);
 
@@ -351,7 +378,8 @@ namespace sofs18
      *  \param devname absolute path to the Linux file that simulates the storage device
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soOpenFileSystem(const char *devname);
 
@@ -364,7 +392,8 @@ namespace sofs18
      * This function is called by the unmount operation.
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soCloseFileSystem(void);
 
@@ -384,7 +413,8 @@ namespace sofs18
      *  \param st pointer to a statvfs structure
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error, 
+     *      being errno the system error that better represents the cause of failure
      */
     int soStatFS(const char *path, struct statvfs *st);
 
@@ -404,7 +434,8 @@ namespace sofs18
      *  \param st pointer to a stat structure
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soStat(const char *path, struct stat *st);
 
@@ -426,7 +457,8 @@ namespace sofs18
      *                    a bitwise combination of R_OK, W_OK, and X_OK
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soAccess(const char *path, int opRequested);
 
@@ -451,7 +483,8 @@ namespace sofs18
      *      S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error, 
+     *      being errno the system error that better represents the cause of failure
      */
     int soChmod(const char *path, mode_t mode);
 
@@ -475,7 +508,8 @@ namespace sofs18
      *  \param group file group id (-1, if group is not to be changed)
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soChown(const char *path, uid_t owner, gid_t group);
 
@@ -493,7 +527,8 @@ namespace sofs18
      *               access and modification times are set to the current time
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soUtime(const char *path, const struct utimbuf *times);
 
@@ -515,7 +550,8 @@ namespace sofs18
      *            value \c UTIME_OMIT, then the corresponding file timestamp is left unchanged
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soUtimens(const char *path, const struct timespec tv[2]);
 
@@ -536,7 +572,8 @@ namespace sofs18
      *                    O_RDONLY, O_WRONLY, O_RDWR
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soOpen(const char *path, int flags);
 
@@ -552,7 +589,8 @@ namespace sofs18
      *  \param path path to the file
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soClose(const char *path);
 
@@ -571,7 +609,8 @@ namespace sofs18
      *      -errno in case of error, being errno the system error that better represents the cause of failure
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error, 
+     *      being errno the system error that better represents the cause of failure
      */
     int soFsync(const char *path);
 
@@ -590,7 +629,8 @@ namespace sofs18
      *  \param path path to the file
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error,
+     *      being errno the system error that better represents the cause of failure
      */
     int soOpendir(const char *path);
 
@@ -606,7 +646,8 @@ namespace sofs18
      *  \param path path to the file
      *
      *  \return 0 on success; 
-     *      -errno in case of error, being errno the system error that better represents the cause of failure
+     *      -errno in case of error, 
+     *      being errno the system error that better represents the cause of failure
      */
     int soClosedir(const char *path);
 
