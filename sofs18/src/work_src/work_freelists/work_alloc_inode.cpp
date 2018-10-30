@@ -41,7 +41,6 @@ namespace sofs18
             soProbe(401, "%s(%x)\n", __FUNCTION__, type);
             //return bin::soAllocInode(type);
             //Retrieve the inode reference from the inode retrieval cache
-            soSBOpen();
             SOSuperBlock* sb = soSBGetPointer();
             //Checks for free inodes
             if(sb->ifree <= 0){
@@ -50,10 +49,8 @@ namespace sofs18
             //If the cache is empty, it has to be replenished before the retrieval takes place.
             if(sb->ircache.idx == INODE_REFERENCE_CACHE_SIZE) {
             	soReplenishIRCache();
-                soSBOpen();
                 //Updates with the new information after the replenish
                 sb = soSBGetPointer();
-                sb->ircache = sb->ircache;
             }
             uint32_t retrieved_node = sb->ircache.ref[sb->ircache.idx];
             int handler = soITOpenInode(retrieved_node);
@@ -76,7 +73,6 @@ namespace sofs18
 
 			//Save inode
 			soITSaveInode(handler);
-			soITCloseInode(handler);
             //Save SB
 			soSBSave();
             return retrieved_node;
