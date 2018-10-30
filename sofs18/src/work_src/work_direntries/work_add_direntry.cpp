@@ -65,7 +65,7 @@ namespace sofs18
                     SODirEntry entry = currentBlockEntries[j];
 
                     /* found free position */
-                    if (numFreeBlock == -1 && entry.name == '\0')   
+                    if (numFreeBlock == -1 && entry.name[0] == '\0')   
                     {
                         numFreeBlock = i;
                         posFreeBlock = j;
