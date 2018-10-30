@@ -44,7 +44,7 @@ static void printUsage(char *cmd_name)
     printf("Sinopsis: %s [OPTIONS] supp-file\n"
            "  OPTIONS:\n"
            "  -q level    --- set quiet mode (default: 0)\n"
-           "  -p num-num  --- set probe ID range (default: 0-0)\n"
+           "  -p num-num  --- set probe ID range (default: 0-999)\n"
            "  -A num-num  --- add range of IDs to probe configuration\n"
            "  -R num-num  --- remove range of IDs from probe configuration\n"
            "  -b          --- set bin configuration to 200-799\n"
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
     Handler handler;
 
     /* open probing system, no range */
-    soProbeOpen(stdout, 0, 0);
+    soProbeOpen(stdout, 0, 999);
 
     /* process command line options */
     int opt;
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
                     printUsage(progName);
                     return EXIT_FAILURE;
                 }
-                soProbeAddIDs(lower, upper);
+                soProbeSetIDs(lower, upper);
                 break;
             }
             case 'A':   /* add IDs to probe conf */
