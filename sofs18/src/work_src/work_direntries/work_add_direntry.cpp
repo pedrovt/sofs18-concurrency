@@ -62,10 +62,10 @@ namespace sofs18
                 /* verify if there's a free position in the block */
                 for (uint32_t j = 0; j < DirentriesPerBlock; j++) 
                 {
-                    SODirEntry entry = currentBlockEntries[i];
+                    SODirEntry entry = currentBlockEntries[j];
 
                     /* found free position */
-                    if (numFreeBlock == -1 && entry.in == NullReference)   // TODO tell profs about the error 
+                    if (numFreeBlock == -1 && entry.name == '\0')   
                     {
                         numFreeBlock = i;
                         posFreeBlock = j;
