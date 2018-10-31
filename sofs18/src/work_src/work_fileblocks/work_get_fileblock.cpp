@@ -72,11 +72,13 @@ namespace sofs18
             uint32_t i1Index = afbn / ReferencesPerBlock;
            
             uint32_t i1[ReferencesPerBlock];
-            soReadDataBlock(ip->i1[i1Index], i1);
 
-            if (!i1) {
+            /* verify if i1[0]/i1[1] is null */
+            if (ip->i1[i1Index] == NullReference)
+            {
                 return NullReference;
             }
+            soReadDataBlock(ip->i1[i1Index], i1);
 
             uint32_t i1Pos = afbn % ReferencesPerBlock;
             return i1[i1Pos];
@@ -106,12 +108,13 @@ namespace sofs18
 
             /* retrieve block */
             uint32_t i2[ReferencesPerBlock * ReferencesPerBlock];   // retrieve i2[0]/i2[1]
-            soReadDataBlock(ip->i2[iiIndex], i2);
-
-            // todo verify if i2[0]/i2[1] is null */
-            if (!i2) {
+            
+            /* verify if i2[0]/i2[1] is null */
+            if (ip->i2[iiIndex])
+            {
                 return NullReference;
             }
+            soReadDataBlock(ip->i2[iiIndex], i2);
 
             uint32_t i2_array[ReferencesPerBlock];  // retrieve position in i2 -> indirect
             soReadDataBlock(i2[iiPos], i2_array);   // referencing array
