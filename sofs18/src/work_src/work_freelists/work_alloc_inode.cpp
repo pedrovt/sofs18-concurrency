@@ -73,6 +73,7 @@ namespace sofs18
 
 			//Save inode
 			soITSaveInode(handler);
+            soITCloseInode(handler);
             //Save SB
 			soSBSave();
             return retrieved_node;
