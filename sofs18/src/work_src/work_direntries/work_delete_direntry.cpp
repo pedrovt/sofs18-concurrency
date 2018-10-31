@@ -29,15 +29,15 @@ namespace sofs18{
                 soReadFileBlock(pih, i, blockDirEntries);					// read block to the array
                 for (uint32_t t = 0; t < DirentriesPerBlock; t++) {			// cycling each dirEntry
                     targetDirEntry = blockDirEntries[i];
-                    if (targetDirEntry.name = name){						// targetDirEntry should have name equal to the name passed as argument
-                        targetDirEntry.name = '\0';			 				// delete its name
+                    if (strcmp(name, targetDirEntry.name) == 0){			// targetDirEntry should have name equal to the name passed as argument
+                        strcpy(targetDirEntry.name, "\0");		 			// delete its name
                         inodeNum = targetDirEntry.in;                    	// return inode number of the dirEntry to delete
                     }
                 }
             }
 
-            if(targetDirEntry == NULL){										// if targetDirEntry not found, throw exception
-            	throw SOException(ENAMETOOLONG, __FUNCTION__);
+            if(targetDirEntry.in == NULL){									// if targetDirEntry not found, throw exception
+            	throw SOException(ENOENT, __FUNCTION__);
             }
 
             return inodeNum;
