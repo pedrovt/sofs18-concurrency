@@ -53,15 +53,7 @@ namespace sofs18
             // save and close Inode
             soITSaveInode(inode);
             soITCloseInode(inode);
-
-            // save superblock
-
-            /* change the following line by your code */
-            //printf("If printing this, it's using teacher version")
-//            bin::soFreeInode(in);
         }
-
     };
-
 };
 

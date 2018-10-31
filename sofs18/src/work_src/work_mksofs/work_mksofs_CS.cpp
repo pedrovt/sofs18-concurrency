@@ -59,11 +59,11 @@ namespace sofs18
                 else if(blocksLeft > 1) btotal = blocksLeftData - (dataReferences + 1);
             }
 
-            std::cout << "Nr of inodes: " << itotal << " using a total of " << (itotal >> 3) << " blocks\n"; 
-            std::cout << "Nr of blocks for free inodes references: " << (roundUp(itotal, 128) >> 7) << "\n";
-            std::cout << "Nr of blocks for data: " << btotal << "\n";
-            std::cout << "Nr of blocks for free data blocks references: " << (roundUp(blocksLeftData, 128) >> 7) << "\n";
-            std::cout << "Nr of blocks for the root: " << rdsize << "\n";
+//            std::cout << "Nr of inodes: " << itotal << " using a total of " << (itotal >> 3) << " blocks\n"; 
+//            std::cout << "Nr of blocks for free inodes references: " << (roundUp(itotal, 128) >> 7) << "\n";
+//            std::cout << "Nr of blocks for data: " << btotal << "\n";
+//            std::cout << "Nr of blocks for free data blocks references: " << (roundUp(blocksLeftData, 128) >> 7) << "\n";
+//            std::cout << "Nr of blocks for the root: " << rdsize << "\n";
 
             /* change the following line by your code */
             //bin::computeStructure(ntotal, itotal, btotal, rdsize);

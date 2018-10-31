@@ -20,8 +20,6 @@ namespace sofs18
             soProbe(602, "%s(%s, %u, %u, %u)\n", __FUNCTION__, name, ntotal, 
                     itotal, rdsize);
 
-            printf("\tUsing work version\n");
-
             // Create SuperBlock
             SOSuperBlock sb;
 

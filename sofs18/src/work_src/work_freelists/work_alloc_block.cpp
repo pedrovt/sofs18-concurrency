@@ -35,8 +35,8 @@ namespace sofs18
             if(sb->dz_free <= 0){
             	throw SOException(ENOSPC,__FUNCTION__);
          	}
-         	if(sb->brcache.idx == BLOCK_REFERENCE_CACHE_SIZE){
-         		soReplenishBRCache();
+         	if(sb->brcache.idx == BLOCK_REFERENCE_CACHE_SIZE-1){
+            sofs18::soReplenishBRCache();
          		sb = soSBGetPointer();
          	}
          	uint32_t retrieved_block = sb->brcache.ref[sb->brcache.idx];
