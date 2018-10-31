@@ -15,7 +15,6 @@ namespace sofs18{
             soProbe(203, "%s(%d, %s, %s)\n", __FUNCTION__, pih, name);
 
             /* change the following line by your code */
-            uint32_t inodeNum;												// var to return
             SODirEntry targetDirEntry;										// DirEntry to delete
 
             if (strlen(name) > SOFS18_MAX_NAME){							// check if name is within the supposed length range
@@ -31,16 +30,11 @@ namespace sofs18{
                     targetDirEntry = blockDirEntries[i];
                     if (strcmp(name, targetDirEntry.name) == 0){			// targetDirEntry should have name equal to the name passed as argument
                         strcpy(targetDirEntry.name, "\0");		 			// delete its name
-                        inodeNum = targetDirEntry.in;                    	// return inode number of the dirEntry to delete
-                    }
+                        return targetDirEntry.in;                   		// return inode number of the dirEntry to delete
+                    }	
                 }
             }
-
-            if(targetDirEntry.in == NULL){									// if targetDirEntry not found, throw exception
-            	throw SOException(ENOENT, __FUNCTION__);
-            }
-
-            return inodeNum;
+            throw SOException(ENOENT, __FUNCTION__);					// if targetDirEntry not found, throw exception
             //return bin::soDeleteDirEntry(pih, name);
         }
     };
