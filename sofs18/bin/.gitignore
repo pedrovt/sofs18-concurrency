@@ -5,3 +5,7 @@
 !.gitignore
 !createDisk
 !func_test.sh
+!test_ric
+!test_ric2
+!test_addDirEntry
+!test_getFileBlock

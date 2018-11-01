@@ -26,7 +26,7 @@ namespace sofs18
             // Pedro Teixeira 84715
 
             soProbe(403, "%s()\n", __FUNCTION__);
-            printf("\tUsing work version\n");
+            //printf("\tUsing work version\n");
 
             SOSuperBlock* sb = soSBGetPointer();
             SOInodeReferenceCache ircache = sb -> ircache;
@@ -49,10 +49,10 @@ namespace sofs18
                 throw SOException(ENOSPC, __FUNCTION__);
             }
 
-            printf("\tBefore FILT head: %d\n\tBefore FILT tail: %d\n", sb->filt_head, sb->filt_tail);
+            //printf("\tBefore FILT head: %d\n\tBefore FILT tail: %d\n", sb->filt_head, sb->filt_tail);
             /* copy from FILT if it's not empty (ie head != tail) */
             if (sb -> filt_head != sb -> filt_tail) {
-                printf("\tReplenishing from FILT\n");
+                //printf("\tReplenishing from FILT\n");
 
                 // Number of the block
                 uint32_t numBlock    = (sb -> filt_head) / ReferencesPerBlock; 
@@ -83,7 +83,7 @@ namespace sofs18
                 // If there's enough references, completely replenish the cache
                 if (numRefsToMove >= INODE_REFERENCE_CACHE_SIZE)
                 {
-                    printf("\t\tEnough references on FILT. Replenish will be full.\n");
+                    //printf("\t\tEnough references on FILT. Replenish will be full.\n");
                     uint32_t numBytes = INODE_REFERENCE_CACHE_SIZE * sizeof(uint32_t);
 
                     // Copy from FILT to cache
@@ -101,7 +101,7 @@ namespace sofs18
 
                 // Otherwise, copy to the end of the cache
                 else {
-                    printf("\t\tNot enough references on FILT. Replenish will be partial.\n");
+                    //printf("\t\tNot enough references on FILT. Replenish will be partial.\n");
                     //printf("\t\tnumRefsToMove= %d\n", numRefsToMove);
                     //printf("\t\tfilt head= %d filt tail= %d\n", sb -> filt_head, sb -> filt_tail);
                     uint32_t numBytes = numRefsToMove * sizeof(uint32_t);
@@ -113,7 +113,6 @@ namespace sofs18
                     // Remove from FILT
                     memset(&block[posBlock], NullReference, numBytes);
 
-                    //!BUG
                     // Update counters
                     sb -> ircache.idx = posCache;
                     sb -> filt_head = sb->filt_head + numRefsToMove;
@@ -126,13 +125,13 @@ namespace sofs18
                 soFILTSaveBlock();
                 soFILTCloseBlock();
                 soSBSave();
-               // printf("\tAfter FILT head: %d\n\tAfter FILT tail: %d\n", sb->filt_head, sb->filt_tail);
+                // printf("\tAfter FILT head: %d\n\tAfter FILT tail: %d\n", sb->filt_head, sb->filt_tail);
                 return;
             }
 
             /* copy from insertion cache if it's not empty (idx != 0) */
             SOInodeReferenceCache iicache = sb->iicache;
-            printf("%d, %d, %d, ", sb->filt_head, sb->filt_tail, iicache.idx);
+            //printf("%d, %d, %d, ", sb->filt_head, sb->filt_tail, iicache.idx);
             if (iicache.idx != 0)
             {
                 //printf("\tReplenishing from insertion cache\n");
