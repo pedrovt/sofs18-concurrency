@@ -29,12 +29,14 @@ namespace sofs18{
                 for (uint32_t t = 0; t < DirentriesPerBlock; t++) {			// cycling each dirEntry
                     targetDirEntry = blockDirEntries[i];
                     if (strcmp(name, targetDirEntry.name) == 0){			// targetDirEntry should have name equal to the name passed as argument
+                    	uint32_t aux = targetDirEntry.in;
                         strcpy(targetDirEntry.name, "\0");		 			// delete its name
-                        return targetDirEntry.in;                   		// return inode number of the dirEntry to delete
+                        targetDirEntry.in = NullReference;
+                        return aux;                   						// return inode number of the dirEntry to delete
                     }	
                 }
             }
-            throw SOException(ENOENT, __FUNCTION__);					// if targetDirEntry not found, throw exception
+            throw SOException(ENOENT, __FUNCTION__);						// if targetDirEntry not found, throw exception
             //return bin::soDeleteDirEntry(pih, name);
         }
     };
