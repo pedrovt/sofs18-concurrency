@@ -32,7 +32,7 @@ namespace sofs18{
                 array[i] = other;
             }
             for (uint32_t i = 0; i < rdsize; i++) {
-                soWriteRawBlock(first_block, &array);
+              sofs18::soWriteRawBlock(first_block, &array);
                 array[0] = other;									// if second block exists the first and the second direntries are reseted
                 array[1] = other;
             }

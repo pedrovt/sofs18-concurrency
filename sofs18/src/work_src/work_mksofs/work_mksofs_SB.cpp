@@ -150,7 +150,7 @@ namespace sofs18
             sb.bicache = biCache;
             
             /* Writes the Superblock in the storage devices ----------------- */
-            soWriteRawBlock(0, &sb);
+            sofs18::soWriteRawBlock(0, &sb);
 
             /* To use the given binary version ------------------------------ */
             //bin::fillInSuperBlock(name, ntotal, itotal, rdsize);

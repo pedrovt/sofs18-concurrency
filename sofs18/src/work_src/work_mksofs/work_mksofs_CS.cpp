@@ -30,10 +30,6 @@ namespace sofs18
         {
             soProbe(601, "%s(%u, %u, ...)\n", __FUNCTION__, ntotal, itotal);
             
-            if(ntotal < 5) std::cout << "No blocks enough to create the disk, won't work properly!\n"; // 1 para SB, 1 para free inodes, 1 para inodes, 1 para free data blocks e 1 para o data block da root
-            if(ntotal < 32) std::cout << "Since the total number of blocks is too low, the number of inodes will be higher than 1/4 of the total blocks!\n"; 
-            if(itotal > (ntotal >> 2)) std::cout << "The number of inodes is too high, capping to 1/4 of total blocs!\n"; 
-
             uint32_t max_itotal = roundDown(ntotal >> 2, 8); // Maximo de inodes é 1/4 do size disk, arredondado para baixo pois como tem de ser multiplo de 8 ao arredondar para cima poderia passar o 1/4
             if(max_itotal == 0) max_itotal = 8; // Permita ao user criar discos com menos de 32 blocos mesmo que obrigue que os inodes > 1/4 blocos totais
             itotal = (itotal == 0) ? roundUp(ntotal >> 3, 8) : (itotal > max_itotal) ? max_itotal : roundUp(itotal, 8);
@@ -58,12 +54,6 @@ namespace sofs18
                 // E o resto para blocos
                 else if(blocksLeft > 1) btotal = blocksLeftData - (dataReferences + 1);
             }
-
-            std::cout << "Nr of inodes: " << itotal << " using a total of " << (itotal >> 3) << " blocks\n"; 
-            std::cout << "Nr of blocks for free inodes references: " << (roundUp(itotal, 128) >> 7) << "\n";
-            std::cout << "Nr of blocks for data: " << btotal << "\n";
-            std::cout << "Nr of blocks for free data blocks references: " << (roundUp(blocksLeftData, 128) >> 7) << "\n";
-            std::cout << "Nr of blocks for the root: " << rdsize << "\n";
 
             /* change the following line by your code */
             //bin::computeStructure(ntotal, itotal, btotal, rdsize);

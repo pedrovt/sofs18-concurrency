@@ -23,14 +23,9 @@ namespace sofs18
             memset(array, 0, BlockSize);
             for (uint32_t i = first_block; i < cnt; i++)
             {
-                soWriteRawBlock(i, &array);
+              sofs18::soWriteRawBlock(i, &array);
             }
-
-            /* To use the given binary version ------------------------------ */
-            //bin::resetBlocks(first_block, cnt);
         }
-
     };
-
 };
 
