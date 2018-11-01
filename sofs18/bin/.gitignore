@@ -4,4 +4,4 @@
 # except those following
 !.gitignore
 !createDisk
-
+!func_test.sh
