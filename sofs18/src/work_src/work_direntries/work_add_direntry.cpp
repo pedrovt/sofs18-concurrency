@@ -16,8 +16,10 @@ namespace sofs18
 
         void soAddDirEntry(int pih, const char *name, uint32_t cin)
         {
+            // Pedro Teixeira 84715
+
             soProbe(202, "%s(%d, %s, %u)\n", __FUNCTION__, pih, name, cin);
-            printf("\tUsing work version\n");
+            //printf("\tUsing work version\n");
 
             /* verify sanity of arguments */
             if (!name) 
@@ -42,8 +44,9 @@ namespace sofs18
             SOInode* inode = soITGetInodePointer(pih);
 
             /* get number of blocks associated to the dir */ 
-            uint32_t numBlocks = (inode->size) / BlockSize;
-            printf("\tNumber of blocks: %d", numBlocks);
+            //uint32_t numBlocks = (inode->size) / BlockSize;
+            uint32_t numBlocks = inode -> blkcnt;
+            //printf("\tNumber of blocks: %d", numBlocks);
 
             /* number and position in the block of the first free entry */
             int numFreeBlock = -1;
@@ -57,7 +60,7 @@ namespace sofs18
             {
                 /* read data block */
                 SODirEntry currentBlockEntries[DirentriesPerBlock];
-                soReadFileBlock(pih, i, currentBlockEntries);
+                sofs18::soReadFileBlock(pih, i, currentBlockEntries);
 
                 /* verify if there's a free position in the block */
                 for (uint32_t j = 0; j < DirentriesPerBlock; j++) 
@@ -65,7 +68,7 @@ namespace sofs18
                     SODirEntry entry = currentBlockEntries[j];
 
                     /* found free position */
-                    if (numFreeBlock == -1 && entry.name[0] == '\0')   
+                    if (numFreeBlock == -1 && entry.name[0] == '\0')
                     {
                         numFreeBlock = i;
                         posFreeBlock = j;
@@ -93,7 +96,7 @@ namespace sofs18
             /* no free position was found -> write a new file block */
             if (numFreeBlock == -1)
             {
-                printf("\n\tNo free position! Allocating block %d\n", numBlocks);
+                //printf("\n\tNo free position! Allocating block %d\n", numBlocks);
                 /* create new block contents */
                 
                 // first position has the new entry
@@ -101,27 +104,29 @@ namespace sofs18
 
                 // others are initialized as free 
                 SODirEntry freeEntry;
-                entry.in = NullReference;
-                memset(entry.name, 0, SOFS18_MAX_NAME);
+                freeEntry.in = NullReference;
+                memset(freeEntry.name, 0, SOFS18_MAX_NAME);
 
                 for (uint32_t i = 1 ; i < DirentriesPerBlock; i++) {
                     entries[i] = freeEntry;
                 }
 
+                // todo must increase size?
                 /* write the block */
-                soWriteFileBlock(pih, numBlocks, entries);
+                sofs18::soWriteFileBlock(pih, numBlocks, entries);
+            
             }
 
             /* free position was found */
             else 
             {
-                printf("\n\tUsing free position at block %d, pos %d\n", numFreeBlock, posFreeBlock);
+                //printf("\n\tUsing free position at block %d, pos %d\n", numFreeBlock, posFreeBlock);
 
                 entries[posFreeBlock] = entry;
-                soWriteFileBlock(pih, numFreeBlock, entries); 
+                sofs18::soWriteFileBlock(pih, numFreeBlock, entries);
             }
 
-            /* change the following line by your code */
+            /* binary version */
             //bin::soAddDirEntry(pih, name, cin);
         }
 
