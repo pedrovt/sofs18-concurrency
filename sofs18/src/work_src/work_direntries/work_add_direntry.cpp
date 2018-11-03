@@ -19,7 +19,8 @@ namespace sofs18
             // Pedro Teixeira 84715
 
             soProbe(202, "%s(%d, %s, %u)\n", __FUNCTION__, pih, name, cin);
-            //printf("\tUsing work version\n");
+            printf("=====================================\nUsing work version of addDirEntry\n");
+            printf("Adding entry %s -> %d to directory with Inode %d\n", name, cin, pih);
 
             /* verify sanity of arguments */
             if (!name) 
@@ -44,9 +45,8 @@ namespace sofs18
             SOInode* inode = soITGetInodePointer(pih);
 
             /* get number of blocks associated to the dir */ 
-            //uint32_t numBlocks = (inode->size) / BlockSize;
-            uint32_t numBlocks = inode -> blkcnt;
-            //printf("\tNumber of blocks: %d", numBlocks);
+            uint32_t numBlocks = (inode->size) / BlockSize;
+            printf("\tCurrent number of blocks: %d\n", numBlocks);
 
             /* number and position in the block of the first free entry */
             int numFreeBlock = -1;
@@ -61,12 +61,12 @@ namespace sofs18
                 /* read data block */
                 SODirEntry currentBlockEntries[DirentriesPerBlock];
                 sofs18::soReadFileBlock(pih, i, currentBlockEntries);
-
+                printf("\tReading block %d\n", i);
                 /* verify if there's a free position in the block */
                 for (uint32_t j = 0; j < DirentriesPerBlock; j++) 
                 {
                     SODirEntry entry = currentBlockEntries[j];
-
+                    printf("\t\tCurrent Entry[%d]= %s -> %d\n", j, entry.name, entry.in);
                     /* found free position */
                     if (numFreeBlock == -1 && entry.name[0] == '\0')
                     {
@@ -92,11 +92,11 @@ namespace sofs18
             SODirEntry entry;
             entry.in = cin;
             strcpy(entry.name, name);
-
+            
             /* no free position was found -> write a new file block */
             if (numFreeBlock == -1)
             {
-                //printf("\n\tNo free position! Allocating block %d\n", numBlocks);
+                printf("\n\tNo free position! Allocating block %d\n", numBlocks);
                 /* create new block contents */
                 
                 // first position has the new entry
@@ -111,21 +111,26 @@ namespace sofs18
                     entries[i] = freeEntry;
                 }
 
-                // must increase size
-                inode->blkcnt = inode->blkcnt + 1;
-                inode->size=inode->blkcnt * BlockSize;
+                for (uint32_t i = 0 ; i < DirentriesPerBlock; i++) {
+                    printf("\t\tEntry to be added: %s -> %d\n", entries[i].name, entries[i].in); 
+                }
 
-                soITSaveInode(pih);
+                // must increase size
+                //inode->blkcnt = inode->blkcnt + 1;
+                
 
                 /* write the block */
-                sofs18::soWriteFileBlock(pih, numBlocks, entries);
+                sofs18::soWriteFileBlock(pih, numBlocks, &entries);
+
+                inode->size=inode->blkcnt * BlockSize;
+                soITSaveInode(pih);
             
             }
 
             /* free position was found */
             else 
             {
-                //printf("\n\tUsing free position at block %d, pos %d\n", numFreeBlock, posFreeBlock);
+                printf("\n\tUsing free position at block %d, pos %d\n", numFreeBlock, posFreeBlock);
 
                 entries[posFreeBlock] = entry;
                 sofs18::soWriteFileBlock(pih, numFreeBlock, entries);
