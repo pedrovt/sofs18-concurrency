@@ -37,12 +37,12 @@ namespace sofs18{
                 throw SOException(EINVAL, __FUNCTION__);
             }
 
-            if(brCache.idx != BLOCK_REFERENCE_CACHE_SIZE - 1){				// if cache not empty
+            if(brCache.idx != BLOCK_REFERENCE_CACHE_SIZE){					// if cache not empty
             	return;														// do nothing
             }
 
             if (head != sb -> fblt_tail){												                        // else if free block list table not empty
-            	uint32_t* block = soFBLTOpenBlock(head);										                // open list head block
+            	uint32_t* block = sofs18::soFBLTOpenBlock(head);										        // open list head block
                 uint32_t numBlock = head/ReferencesPerBlock;                                                    // block number
                 uint32_t posBlock = head%ReferencesPerBlock;                                                    // first non NullReference in the block
                 uint32_t numRefsToMove = ReferencesPerBlock - posBlock;											// max number of references that can be copied from that block
@@ -61,26 +61,24 @@ namespace sofs18{
                     memcpy(&(brCache.ref[posCache]), &block[posBlock], numRefsToMove * sizeof(uint32_t));		// replenish retrieval cache with references from table
                     memset(&block[posBlock], NullReference, numRefsToMove * sizeof(uint32_t));					// resets table entries
                     brCache.idx = posCache;																		// update idx
-                    sb->fblt_head += numRefsToMove;																// update fblt head
+                    sb -> fblt_head += numRefsToMove;															// update fblt head
+                    if (sb -> fblt_head == sb -> fblt_tail) {
+                        sb -> fblt_head = 0;
+                        sb -> fblt_tail = 0;
+                    }
                 }     
             }
 
             else if(biCache.idx != 0){																								// else, insertion cache not empty
             	memcpy(&(brCache.ref[BLOCK_REFERENCE_CACHE_SIZE - biCache.idx]), biCache.ref, biCache.idx*sizeof(uint32_t));		// replenish retrieval cache with references from insertion cache
             	memset(&(biCache.ref), NullReference, biCache.idx*sizeof(uint32_t));												// resets insertion cache references //
-                sb->fblt_head = BLOCK_REFERENCE_CACHE_SIZE - biCache.idx;                                                           // update table head
                 brCache.idx += BLOCK_REFERENCE_CACHE_SIZE - biCache.idx;                                                           	// update idx
                 biCache.idx = 0;                                                           											// update idx
             }
 
-            else{
-                printf("Internal Error in Replenish brcache!");				// INTERNAL ERROR. Should not happen!
-                exit(1);
-            }
-
-            soFBLTSaveBlock();					// save table head
-            soFBLTCloseBlock();					// close table head
-            soSBSave();							// save superblock
+            sofs18::soFBLTSaveBlock();					// save table head
+            sofs18::soFBLTCloseBlock();					// close table head
+            sofs18::soSBSave();							// save superblock
             //bin::soReplenishBRCache();
         }
     };

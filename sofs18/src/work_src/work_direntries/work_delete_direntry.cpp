@@ -21,11 +21,11 @@ namespace sofs18{
                 throw SOException(ENAMETOOLONG, __FUNCTION__);
             }
 
-            SOInode* inode = soITGetInodePointer(pih);						// get inode
+            SOInode* inode = sofs18::soITGetInodePointer(pih);				// get inode
             uint32_t numBlocks = (inode->size)/BlockSize;					// number of blocks with dirEntries
             for (uint32_t i = 0; i < numBlocks; i++) {						// cycling all the blocks with dirEntries
                 SODirEntry blockDirEntries[DirentriesPerBlock];				// array to store entries of a block
-                soReadFileBlock(pih, i, blockDirEntries);					// read block to the array
+                sofs18::soReadFileBlock(pih, i, blockDirEntries);			// read block to the array
                 for (uint32_t t = 0; t < DirentriesPerBlock; t++) {			// cycling each dirEntry
                     targetDirEntry = blockDirEntries[i];
                     if (strcmp(name, targetDirEntry.name) == 0){			// targetDirEntry should have name equal to the name passed as argument
