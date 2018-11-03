@@ -111,7 +111,12 @@ namespace sofs18
                     entries[i] = freeEntry;
                 }
 
-                // todo must increase size?
+                // must increase size
+                inode->blkcnt = inode->blkcnt + 1;
+                inode->size=inode->blkcnt * BlockSize;
+
+                soITSaveInode(pih);
+
                 /* write the block */
                 sofs18::soWriteFileBlock(pih, numBlocks, entries);
             
@@ -133,4 +138,3 @@ namespace sofs18
     };
 
 };
-
