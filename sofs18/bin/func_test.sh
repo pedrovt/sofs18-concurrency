@@ -43,7 +43,7 @@ function check_bin_free_block
   done
 
   echo -e "${BOLD_BLUE}Showing what diffs in dal calls between teacher and yours:"
-  echo -e "${BOLD_RED}Teacher:"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
   echo -e "fdb\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 | sed -e 's/Data .*//g' | sed -e 's/.*(444)/(444)/g' | sed -e 's/.*(442)/(442)/g' | tail -n+4 | head -n-5 > c_t.txt 
   cat c_t.txt
   ./showblock $DISK_NAME > t.txt
@@ -58,7 +58,7 @@ function check_bin_free_block
   done
   rm iol
  
-  echo -e "${BOLD_BLUE}Yours:"
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
   echo -e "fdb\n1\nq\n" | ./testtool $DISK_NAME -q1 -a 444-444 -p400-700 | sed -e 's/Data .*//g' | sed -e 's/.*(444)/(444)/g' | sed -e 's/.*(442)/(442)/g' | tail -n+4 | head -n-5 > c_m.txt
   ./showblock $DISK_NAME > m.txt
   cat c_m.txt
@@ -66,15 +66,14 @@ function check_bin_free_block
   diff t.txt m.txt > a
   diff c_t.txt c_m.txt > b
   if [ -s b ]; then
-    echo -e "${BOLD_RED}Your calls differ from teacher:"
+    echo -e "${BOLD_RED}Your calls differ from teacher:${STOP}"
   else
     echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
     rm c_t.txt c_m.txt b
   fi
-  echo -e "${BOLD_GREEN}Diffs in superblock struct:"
+  echo -e "${BOLD_GREEN}Diffs in superblock struct:${STOP}"
   if [ -s a ]; then
-    echo -e "${BOLD_RED}Yeah...You screwed up here:"
-    echo -e -n $REGULAR
+    echo -e "${BOLD_RED}Yeah...You screwed up here:${STOP}"
     cat a
   else
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
@@ -97,7 +96,7 @@ function check_bin_free_inode
     let FREES--
   done
   echo -e "${BOLD_BLUE}Showing what diffs in dal calls between teacher and yours:"
-  echo -e "${BOLD_RED}Teacher:"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
   echo -e "fi\n${FREES}\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/Inode .*//g' | sed -e 's/.*(402)/(402)/g' | sed -e 's/.*(404)/(404)/g' | head -n-5 | tail -n+4 > t1.txt
   cat t1.txt
   ./showblock $DISK_NAME > t2.txt
@@ -112,7 +111,7 @@ function check_bin_free_inode
   done
   rm iol
  
-  echo -e "${BOLD_BLUE}Yours:"
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
   echo -e "fi\n1\nq\n" | ./testtool $DISK_NAME -q1 -a 404-404 -p400-700 | sed -e 's/Inode .*//g' | sed -e 's/.*(404)/(404)/g' | sed -e 's/.*(402)/(402)/g' | tail -n+4 | head -n-5 > m1.txt
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
@@ -130,8 +129,7 @@ function check_bin_free_inode
     rm t1.txt m1.txt a
   fi
   if [ -s b ]; then
-    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:"
-    echo -e -n $REGULAR
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
     cat b
     rm b
   else
@@ -149,15 +147,58 @@ function check_bin_alloc_inode
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/ALLOC_INODE WITHOUT WORK_REPLENISH:${STOP}"
   
   echo -e "${BOLD_BLUE}Showing what diffs in dal calls between teacher and yours:"
-  echo -e "${BOLD_RED}Teacher:"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
   echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/Inode .*//g' | sed -e 's/.*(401)/(401)/g' | sed -e 's/.*(403)/(403)/g' | head -n-5 | tail -n+4 > t1.txt
   cat t1.txt
   ./showblock $DISK_NAME > t2.txt
  
   ./mksofs $DISK_NAME > iol
   
-  echo -e "${BOLD_BLUE}Yours:"
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
   echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -a403-403 -p400-700 | sed -e 's/Inode .*//g' | sed -e 's/.*(401)/(401)/g' | sed -e 's/.*(403)/(403)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  sed -i -e 's/\[01;31m//g' t1.txt
+  sed -i -e 's/\[01;34m//g' t1.txt
+  sed -i -e 's/\[01;34m//g' m1.txt
+  sed -i -e 's/\[01;31m//g' m1.txt
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!${STOP}"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!${STOP}"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:"
+    cat b
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+}
+
+function check_bin_alloc_block 
+{
+  DISK_NAME=$1
+
+  ./mksofs $DISK_NAME > iol
+
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/ALLOC_BLOCK WITHOUT WORK_REPLENISH:${STOP}"
+  
+  echo -e "${BOLD_BLUE}Showing what diffs in dal calls between teacher and yours:"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "adb\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/Data .*//g' | sed -e 's/.*(441)/(441)/g' | sed -e 's/.*(443)/(443)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+ 
+  ./mksofs $DISK_NAME > iol
+  
+  echo -e "${BOLD_BLUE}Yours:"
+  echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -a443-443 -p400-700 | sed -e 's/Data .*//g' | sed -e 's/.*(441)/(441)/g' | sed -e 's/.*(443)/(443)/g' | tail -n+4 | head -n-5 > m1.txt
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
 
@@ -174,7 +215,7 @@ function check_bin_alloc_inode
     rm t1.txt m1.txt a
   fi
   if [ -s b ]; then
-    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:"
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
     echo -e -n $REGULAR
     cat b
     rm b

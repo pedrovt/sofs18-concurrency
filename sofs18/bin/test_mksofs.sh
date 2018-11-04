@@ -74,11 +74,38 @@ echo -e "${BOLD_GREEN}Creating Disks (${SIZE})"
 rm t m > l 2> l
 rm l
 ./createDisk t $SIZE 2> a
+rm a
 cp t m
 
 echo -e "${BOLD_GREEN}Formatting disks"
+# teacher format
 ./mksofs -z -b -d t | sed -e 's/.*(751).*//g' | sed -e 's/.*(752).*//g' | sed -e 's/.*(791).*//g' | sed -e 's/.*(60/(60/g' | sed -e 's/.*SOFS18.*/Installing SOFS18/g' | sed '/^$/d' > c_a
-./mksofs -z -d m | sed -e 's/.*(751).*//g' | sed -e 's/.*(752).*//g' | sed -e 's/.*(791).*//g' | sed -e 's/.*(60/(60/g' | sed -e 's/.*SOFS18.*/Installing SOFS18/g' | sed '/^$/d' > c_b
+
+# our format
+BINS=""
+if [ $FLAG_CS -eq 0 ]; then
+  BINS+=" -a 601-601 "
+fi
+if [ $FLAG_SB -eq 0 ]; then
+  BINS+=" -a 602-602 "
+fi
+if [ $FLAG_FILT -eq 0 ]; then
+  BINS+=" -a 603-603 "
+fi
+if [ $FLAG_IT -eq 0 ]; then
+  BINS+=" -a 604-604 "
+fi
+if [ $FLAG_FBLT -eq 0 ]; then
+  BINS+=" -a 605-605 "
+fi
+if [ $FLAG_RD -eq 0 ]; then
+  BINS+=" -a 606-606 "
+fi
+if [ $FLAG_RB -eq 0 ]; then
+  BINS+=" -a 607-607 "
+fi
+
+./mksofs -z -d $BINS m | sed -e 's/.*(751).*//g' | sed -e 's/.*(752).*//g' | sed -e 's/.*(791).*//g' | sed -e 's/.*(60/(60/g' | sed -e 's/.*SOFS18.*/Installing SOFS18/g' | sed '/^$/d' > c_b
 diff c_a c_b > calls
 
 echo -e "${BOLD_GREEN}Checking call Diffs:"
