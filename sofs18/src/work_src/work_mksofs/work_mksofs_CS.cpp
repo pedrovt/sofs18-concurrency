@@ -54,12 +54,9 @@ namespace sofs18
                 // E o resto para blocos
                 else if(blocksLeft > 1) btotal = blocksLeftData - (dataReferences + 1);
             }
-
-            /* change the following line by your code */
             //bin::computeStructure(ntotal, itotal, btotal, rdsize);
         }
 
     };
 
 };
-
