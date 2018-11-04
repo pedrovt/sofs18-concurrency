@@ -15,12 +15,13 @@ namespace sofs18{
             soProbe(205, "%s(%d)\n", __FUNCTION__, ih);
 
             /* change the following line by your code */
+            SODirEntry targetDirEntry;
             SODirEntry blockDirEntries[DirentriesPerBlock];				// array to store entries of a block
-            sofs18::soReadFileBlock(ih, i, blockDirEntries);			// read block to the array
-            for (uint32_t t = 0; t < DirentriesPerBlock; t++) {			// cycling each dirEntry
+            sofs18::soReadFileBlock(ih, 0, blockDirEntries);			// read block to the array
+            for (uint32_t i = 2; i < DirentriesPerBlock; i++) {			// cycling each dirEntry
                 targetDirEntry = blockDirEntries[i];
-                if (strcmp(".", targetDirEntry.name) == 0 or strcmp("..", targetDirEntry.name) == 0){	// targetDirEntry should be either "." or ".."
-                    return false;               														
+                if (targetDirEntry.in != NullReference){				// targetDirEntry should have name equal to the name passed as argument
+                    return false;               						// return inode number of the dirEntry to delete
                 }	
             }
             return true;
@@ -28,4 +29,3 @@ namespace sofs18{
         }
     };
 };
-
