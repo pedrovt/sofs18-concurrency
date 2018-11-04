@@ -9,3 +9,4 @@
 !test_ric2
 !test_addDirEntry
 !test_getFileBlock
+!test_mksofs.sh

@@ -15,7 +15,6 @@ namespace sofs18
         void resetBlocks(uint32_t first_block, uint32_t cnt)
         {
             soProbe(607, "%s(%u, %u)\n", __FUNCTION__, first_block, cnt);
-            printf("\tUsing work version of resetBlocks\n");
 
             /* Creates an array of BlockSize with 0s and writes it from LBA 
                Address first_block until LBA Address first_block + cnt - 1 -- */

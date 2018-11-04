@@ -16,7 +16,6 @@ namespace sofs18
                     itotal, rdsize);
 
             // Pedro Teixeira 84715
-            //printf("\tUsing work version\n");
 
             // Create SuperBlock
             SOSuperBlock sb;
