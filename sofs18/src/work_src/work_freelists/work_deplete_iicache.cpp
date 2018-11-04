@@ -30,8 +30,6 @@ namespace sofs18
             uint32_t block_number = sb->filt_tail / ReferencesPerBlock;
             uint32_t position_in_block = sb->filt_tail % ReferencesPerBlock;
             uint32_t *block = soFILTOpenBlock(block_number);
-
-            // Spaces left in freelist
             int blockFull = 0;
 
             // It will move the whole cache into the FILT
@@ -42,13 +40,15 @@ namespace sofs18
                 blockFull = 1;
             }
 
+            // Copies x refs from the cache to the filt (x = refsToCopy)
 			memcpy(&block[position_in_block], &(sb->iicache.ref), refsToCopy * sizeof(uint32_t));
+            // Turns the cache coppied into NullReference
             memset(&(sb->iicache.ref), NullReference, refsToCopy * sizeof(uint32_t));
 
             // Moves the cache that could not be removed to the start of the cache
             if(blockFull) {
                 int index = 0;
-                for(int i = refsToCopy; i < sb->iicache.idx; i++) {
+                for(uint32_t i = refsToCopy; i < sb->iicache.idx; i++) {
                     sb->iicache.ref[index++] = sb->iicache.ref[i];
                     sb->iicache.ref[i] = NullReference;
                 }
@@ -61,7 +61,7 @@ namespace sofs18
             soFILTSaveBlock();
             soFILTCloseBlock();
             soSBSave();
-            //bin::soDepleteI   ICache();
+            //bin::soDepleteIICache();
 
         }
 

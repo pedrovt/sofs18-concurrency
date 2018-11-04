@@ -16,9 +16,10 @@ namespace sofs18
         void soReadFileBlock(int ih, uint32_t fbn, void *buf)
         {
             soProbe(331, "%s(%d, %u, %p)\n", __FUNCTION__, ih, fbn, buf);
-
-            /* change the following line by your code */
-            bin::soReadFileBlock(ih, fbn, buf);
+            uint32_t block_number = sofs18::soGetFileBlock(ih, fbn);
+            if(block_number != NullReference) 
+                sofs18::soReadDataBlock(block_number, buf);
+            //bin::soReadFileBlock(ih, fbn, buf);
         }
 
     };
