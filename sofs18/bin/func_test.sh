@@ -243,7 +243,7 @@ function check_bin_deplete_bi
   let FREES=10
   while [ $FREES -gt 1 ] 
   do
-    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -r444-444 -p400-700 > iol
     let FREES--
   done
   echo -e "dbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | tail -n+4 | head -n-5 > m1.txt
@@ -271,7 +271,7 @@ function check_bin_deplete_bi
   # test limited deplete
   ./mksofs $DISK_NAME > iol
   echo -e $STOP
-  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (TAIL TO HIGH):${STOP}"
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (NOT FILLED CACHE):${STOP}"
   let FREES=15
   while [ $FREES -gt 10 ] 
   do
@@ -291,11 +291,11 @@ function check_bin_deplete_bi
   let FREES=15
   while [ $FREES -gt 10 ] 
   do
-    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -r444-444 -p400-700 > iol
     let FREES--
   done
   while [ $FREES -gt 0 ]; do
-    echo -e "fdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    echo -e "fdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -r444-444 -p400-700 > iol
     let FREES--
   done
   echo -e "${BOLD_BLUE}Yours:${STOP}"
@@ -321,82 +321,24 @@ function check_bin_deplete_bi
     rm t2.txt m2.txt b 
   fi
   
-  # test if tail has been freed once
-  ./mksofs $DISK_NAME > iol
-  echo -e $STOP
-  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 3 (FREED TAIL ONCE):${STOP}"
-  let FREES=$(($(./showblock $DISK_NAME | grep 'number of data blocks' | sed -e 's/.*blocks: //g')-1))
-  while [ $FREES -gt 0 ] 
-  do
-    if [ $(($FREES%2)) -eq 0 ]; then
-      echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    else
-      echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    fi
-    let FREES--
-  done
-  echo -e "${BOLD_RED}Teacher:${STOP}"
-  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | head -n-5 | tail -n+4 > t1.txt
-  cat t1.txt
-  ./showblock $DISK_NAME > t2.txt
-  
-  ./mksofs $DISK_NAME > iol
-  let FREES=$(($(./showblock $DISK_NAME | grep 'number of data blocks' | sed -e 's/.*blocks: //g')-1))
-  while [ $FREES -gt 0 ] 
-  do
-    if [ $(($FREES%2)) -eq 0 ]; then
-      echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    else
-      echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    fi
-    let FREES--
-  done
-  echo -e "${BOLD_BLUE}Yours:${STOP}"
-  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | tail -n+4 | head -n-5 > m1.txt
-  cat m1.txt
-  ./showblock $DISK_NAME > m2.txt
-
-  diff t1.txt m1.txt > a
-  diff t2.txt m2.txt > b
-  if [ -s a ]; then
-    echo -e "${BOLD_RED}Your calls differ from the teacher!"
-  else
-    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
-    rm t1.txt m1.txt a
-  fi
-  if [ -s b ]; then
-    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
-    echo -e -n $REGULAR
-    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
-    rm b
-  else
-    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
-    rm t2.txt m2.txt b 
-  fi
 }
 
 function check_bin_replenish_br
 {
   DISK_NAME=$1
-  ALLOCS=$(./showblock $DISK_NAME | grep 'Number of free inodes: ' | sed -e 's/.*inodes: //g')
+  ALLOCS=$(./showblock $DISK_NAME | grep 'Number of free data ' | sed -e 's/.*blocks: //g')
   ORIG_ALLOCS=$(($ALLOCS-1))
 
   ./mksofs $DISK_NAME > iol
 
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/REPLENISH_BR_CACHE:${STOP}"
   
-  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 2 cases:"
-  echo -e "\tIf regular replenish\n\tIf has not enough Inodes\n\tIf it has passed once the limit"
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 3 cases:"
+  echo -e "\tIf regular replenish\n\tIf cache is half filled\n\tIf it has not enough blocks to fill the cache"
  
   # test regular replenish
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR REPLENISH):${STOP}"
   echo -e "${BOLD_RED}Teacher:${STOP}"
-  let ALLOCS=10
-  while [ $ALLOCS -gt 1 ] 
-  do
-    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    let ALLOCS--
-  done
   echo -e "rbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | head -n-5 | tail -n+4 > t1.txt
   cat t1.txt
   ./showblock $DISK_NAME > t2.txt
@@ -404,12 +346,6 @@ function check_bin_replenish_br
 
   ./mksofs $DISK_NAME > iol
   echo -e "${BOLD_BLUE}Yours:${STOP}"
-  let ALLOCS=10
-  while [ $ALLOCS -gt 1 ] 
-  do
-    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    let ALLOCS--
-  done
   echo -e "rbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | tail -n+4 | head -n-5 > m1.txt
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
@@ -425,22 +361,22 @@ function check_bin_replenish_br
   if [ -s b ]; then
     echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
     echo -e -n $REGULAR
-    cat b
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
     rm b
   else
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
     rm t2.txt m2.txt b 
   fi
   
-  # test limited deplete
+  # test limited replenish 
   ./mksofs $DISK_NAME > iol
   echo -e $STOP
-  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (TAIL TO HIGH):${STOP}"
-  let ALLOCS=$(($ORIG_ALLOCS-15))
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (HALF FULL CACHE):${STOP}"
+  let ALLOCS=10
   while [ $ALLOCS -gt 0 ] 
   do
     echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    let FREES--
+    let ALLOCS--
   done
   echo -e "${BOLD_RED}Teacher:${STOP}"
   echo -e "rbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | head -n-5 | tail -n+4 > t1.txt
@@ -448,11 +384,56 @@ function check_bin_replenish_br
   ./showblock $DISK_NAME > t2.txt
   
   ./mksofs $DISK_NAME > iol
-  let ALLOCS=$(($ORIG_ALLOCS-15))
+  let ALLOCS=10
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -r443-443 -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "rbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 -r443-443 | sed -e 's/.*(443)/(443)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+  
+  # test if it does not have enough blocks to replenish 
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 3 (NOT ENOUGH FREE BLOCKS TO FILL CACHE):${STOP}"
+  let ALLOCS=$(($ORIG_ALLOCS-5))
   while [ $ALLOCS -gt 0 ] 
   do
     echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    let FREES--
+    let ALLOCS--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "rbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let ALLOCS=$(($ORIG_ALLOCS-5))
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -r443-443 -p400-700 > iol
+    let ALLOCS--
   done
   echo -e "${BOLD_BLUE}Yours:${STOP}"
   echo -e "rbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | tail -n+4 | head -n-5 > m1.txt
@@ -487,8 +468,8 @@ function check_bin_deplete_ii
 
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/DEPLETE_II_CACHE:${STOP}"
   
-  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 3 cases:"
-  echo -e "\tIf regular deplete\n\tIf filt has not enough space\n\tIf it has passed tail"
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 2 cases:"
+  echo -e "\tIf regular deplete\n\tIf filt has not enough space"
  
   # test regular deplete
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR DEPLETE):${STOP}"
@@ -586,39 +567,32 @@ function check_bin_deplete_ii
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
     rm t2.txt m2.txt b 
   fi
-  
-  # test if tail has been freed once
+}
+
+function check_bin_replenish_ir
+{
+  DISK_NAME=$1
+  ALLOCS=$(./showblock $DISK_NAME | grep 'Number of free inodes' | sed -e 's/.*inodes: //g')
+  ORIG_ALLOCS=$(($ALLOCS-1))
+
   ./mksofs $DISK_NAME > iol
-  echo -e $STOP
-  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 3 (FREED TAIL ONCE):${STOP}"
-  let FREES=$(($(./showblock $DISK_NAME | grep 'number of inodes' | sed -e 's/.*inodes: //g')-1))
-  while [ $FREES -gt 0 ] 
-  do
-    if [ $(($FREES%2)) -eq 0 ]; then
-      echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    else
-      echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    fi
-    let FREES--
-  done
+
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/REPLENISH_IR_CACHE:${STOP}"
+  
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 3 cases:"
+  echo -e "\tIf regular replenish\n\tIf cache is half filled\n\tIf it has not enough inodes to fill the cache"
+ 
+  # test regular replenish
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR REPLENISH):${STOP}"
   echo -e "${BOLD_RED}Teacher:${STOP}"
-  echo -e "dic\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | head -n-5 | tail -n+4 > t1.txt
+  echo -e "ric\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(403)/(403)/g' | head -n-5 | tail -n+4 > t1.txt
   cat t1.txt
   ./showblock $DISK_NAME > t2.txt
-  
+ 
+
   ./mksofs $DISK_NAME > iol
-  let FREES=$(($(./showblock $DISK_NAME | grep 'number of inodes' | sed -e 's/.*inodes: //g')-1))
-  while [ $FREES -gt 0 ] 
-  do
-    if [ $(($FREES%2)) -eq 0 ]; then
-      echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    else
-      echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
-    fi
-    let FREES--
-  done
   echo -e "${BOLD_BLUE}Yours:${STOP}"
-  echo -e "dic\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | tail -n+4 | head -n-5 > m1.txt
+  echo -e "ric\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(403)/(403)/g' | tail -n+4 | head -n-5 > m1.txt
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
 
@@ -639,11 +613,96 @@ function check_bin_deplete_ii
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
     rm t2.txt m2.txt b 
   fi
-}
+  
+  # test limited replenish 
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (HALF FULL CACHE):${STOP}"
+  let ALLOCS=10
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "ric\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(403)/(403)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let ALLOCS=10
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -r403-403 -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "ric\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 -r403-403 | sed -e 's/.*(403)/(403)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
 
-function check_bin_replenish_ir
-{
-  DISK_NAME=$1
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+  
+  # test if it does not have enough inodes to replenish 
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 3 (NOT ENOUGH FREE INODES TO FILL CACHE):${STOP}"
+  let ALLOCS=$(($ORIG_ALLOCS-10))
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "ric\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(403)/(403)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let ALLOCS=$(($ORIG_ALLOCS-10))
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -r403-403 -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "ric\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(403)/(403)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    #rm t2.txt m2.txt b 
+  fi
 }
 
 case $1 in
