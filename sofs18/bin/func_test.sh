@@ -74,7 +74,7 @@ function check_bin_free_block
   echo -e "${BOLD_GREEN}Diffs in superblock struct:${STOP}"
   if [ -s a ]; then
     echo -e "${BOLD_RED}Yeah...You screwed up here:${STOP}"
-    cat a
+    cat a | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
   else
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
   fi
@@ -116,10 +116,6 @@ function check_bin_free_inode
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
 
-  sed -i -e 's/\[01;31m//g' t1.txt
-  sed -i -e 's/\[01;34m//g' t1.txt
-  sed -i -e 's/\[01;34m//g' m1.txt
-  sed -i -e 's/\[01;31m//g' m1.txt
   diff t1.txt m1.txt > a
   diff t2.txt m2.txt > b
   if [ -s a ]; then
@@ -130,7 +126,7 @@ function check_bin_free_inode
   fi
   if [ -s b ]; then
     echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
-    cat b
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
     rm b
   else
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
@@ -159,10 +155,6 @@ function check_bin_alloc_inode
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
 
-  sed -i -e 's/\[01;31m//g' t1.txt
-  sed -i -e 's/\[01;34m//g' t1.txt
-  sed -i -e 's/\[01;34m//g' m1.txt
-  sed -i -e 's/\[01;31m//g' m1.txt
   diff t1.txt m1.txt > a
   diff t2.txt m2.txt > b
   if [ -s a ]; then
@@ -173,7 +165,7 @@ function check_bin_alloc_inode
   fi
   if [ -s b ]; then
     echo -e "${BOLD_RED}Yeah...\nYou screwed up here:"
-    cat b
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
     rm b
   else
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
@@ -202,10 +194,62 @@ function check_bin_alloc_block
   cat m1.txt
   ./showblock $DISK_NAME > m2.txt
 
-  sed -i -e 's/\[01;31m//g' t1.txt
-  sed -i -e 's/\[01;34m//g' t1.txt
-  sed -i -e 's/\[01;34m//g' m1.txt
-  sed -i -e 's/\[01;31m//g' m1.txt
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+}
+
+function check_bin_deplete_bi
+{
+  DISK_NAME=$1
+  FREES=10
+
+  ./mksofs $DISK_NAME > iol
+
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/DEPLETE_BI_CACHE:${STOP}"
+  
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 3 cases:"
+  echo -e "\tIf regular deplete\n\tIf filt has not enough space\n\tIf it has freed the tail once"
+ 
+  # test regular deplete
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR DEPLETE):${STOP}"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  while [ $FREES -gt 1 ] 
+  do
+    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+ 
+
+  ./mksofs $DISK_NAME > iol
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  let FREES=10
+  while [ $FREES -gt 1 ] 
+  do
+    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
   diff t1.txt m1.txt > a
   diff t2.txt m2.txt > b
   if [ -s a ]; then
@@ -223,6 +267,383 @@ function check_bin_alloc_block
     echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
     rm t2.txt m2.txt b 
   fi
+  
+  # test limited deplete
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (TAIL TO HIGH):${STOP}"
+  let FREES=15
+  while [ $FREES -gt 10 ] 
+  do
+    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  while [ $FREES -gt 0 ]; do
+    echo -e "fdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let FREES=15
+  while [ $FREES -gt 10 ] 
+  do
+    echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  while [ $FREES -gt 0 ]; do
+    echo -e "fdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+  
+  # test if tail has been freed once
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 3 (FREED TAIL ONCE):${STOP}"
+  let FREES=$(($(./showblock $DISK_NAME | grep 'number of data blocks' | sed -e 's/.*blocks: //g')-1))
+  while [ $FREES -gt 0 ] 
+  do
+    if [ $(($FREES%2)) -eq 0 ]; then
+      echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    else
+      echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    fi
+    let FREES--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let FREES=$(($(./showblock $DISK_NAME | grep 'number of data blocks' | sed -e 's/.*blocks: //g')-1))
+  while [ $FREES -gt 0 ] 
+  do
+    if [ $(($FREES%2)) -eq 0 ]; then
+      echo -e "adb\nfdb\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    else
+      echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    fi
+    let FREES--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "dbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(444)/(444)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+}
+
+function check_bin_replenish_br
+{
+  DISK_NAME=$1
+  ALLOCS=$(./showblock $DISK_NAME | grep 'Number of free inodes: ' | sed -e 's/.*inodes: //g')
+  ORIG_ALLOCS=$(($ALLOCS-1))
+
+  ./mksofs $DISK_NAME > iol
+
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/REPLENISH_BR_CACHE:${STOP}"
+  
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 2 cases:"
+  echo -e "\tIf regular replenish\n\tIf has not enough Inodes\n\tIf it has passed once the limit"
+ 
+  # test regular replenish
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR REPLENISH):${STOP}"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  let ALLOCS=10
+  while [ $ALLOCS -gt 1 ] 
+  do
+    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "rbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+ 
+
+  ./mksofs $DISK_NAME > iol
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  let ALLOCS=10
+  while [ $ALLOCS -gt 1 ] 
+  do
+    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let ALLOCS--
+  done
+  echo -e "rbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+  
+  # test limited deplete
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (TAIL TO HIGH):${STOP}"
+  let ALLOCS=$(($ORIG_ALLOCS-15))
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "rbc\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let ALLOCS=$(($ORIG_ALLOCS-15))
+  while [ $ALLOCS -gt 0 ] 
+  do
+    echo -e "adb\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "rbc\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(443)/(443)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+}
+
+function check_bin_deplete_ii
+{
+  DISK_NAME=$1
+  FREES=10
+
+  ./mksofs $DISK_NAME > iol
+
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/DEPLETE_II_CACHE:${STOP}"
+  
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 3 cases:"
+  echo -e "\tIf regular deplete\n\tIf filt has not enough space\n\tIf it has passed tail"
+ 
+  # test regular deplete
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR DEPLETE):${STOP}"
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  while [ $FREES -gt 1 ] 
+  do
+    echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "dic\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+ 
+
+  ./mksofs $DISK_NAME > iol
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  let FREES=10
+  while [ $FREES -gt 1 ] 
+  do
+    echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "dic\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+  
+  # test limited deplete
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 2 (TAIL TO HIGH):${STOP}"
+  let FREES=15
+  while [ $FREES -gt 10 ] 
+  do
+    echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  while [ $FREES -gt 0 ]; do
+    echo -e "fi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "dic\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let FREES=15
+  while [ $FREES -gt 10 ] 
+  do
+    echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  while [ $FREES -gt 0 ]; do
+    echo -e "fi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    let FREES--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "dic\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+  
+  # test if tail has been freed once
+  ./mksofs $DISK_NAME > iol
+  echo -e $STOP
+  echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 3 (FREED TAIL ONCE):${STOP}"
+  let FREES=$(($(./showblock $DISK_NAME | grep 'number of inodes' | sed -e 's/.*inodes: //g')-1))
+  while [ $FREES -gt 0 ] 
+  do
+    if [ $(($FREES%2)) -eq 0 ]; then
+      echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    else
+      echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    fi
+    let FREES--
+  done
+  echo -e "${BOLD_RED}Teacher:${STOP}"
+  echo -e "dic\nq\n" | ./testtool $DISK_NAME -b -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | head -n-5 | tail -n+4 > t1.txt
+  cat t1.txt
+  ./showblock $DISK_NAME > t2.txt
+  
+  ./mksofs $DISK_NAME > iol
+  let FREES=$(($(./showblock $DISK_NAME | grep 'number of inodes' | sed -e 's/.*inodes: //g')-1))
+  while [ $FREES -gt 0 ] 
+  do
+    if [ $(($FREES%2)) -eq 0 ]; then
+      echo -e "ai\n1\nfi\n${FREES}\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    else
+      echo -e "ai\n1\nq\n" | ./testtool $DISK_NAME -q1 -b -p400-700 > iol
+    fi
+    let FREES--
+  done
+  echo -e "${BOLD_BLUE}Yours:${STOP}"
+  echo -e "dic\nq\n" | ./testtool $DISK_NAME -q1 -p400-700 | sed -e 's/.*(404)/(404)/g' | tail -n+4 | head -n-5 > m1.txt
+  cat m1.txt
+  ./showblock $DISK_NAME > m2.txt
+
+  diff t1.txt m1.txt > a
+  diff t2.txt m2.txt > b
+  if [ -s a ]; then
+    echo -e "${BOLD_RED}Your calls differ from the teacher!"
+  else
+    echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!"
+    rm t1.txt m1.txt a
+  fi
+  if [ -s b ]; then
+    echo -e "${BOLD_RED}Yeah...\nYou screwed up here:${STOP}"
+    echo -e -n $REGULAR
+    cat b | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
+    rm b
+  else
+    echo -e "${BOLD_GREEN}None! It is possible that you didn't screw up!!!"
+    rm t2.txt m2.txt b 
+  fi
+}
+
+function check_bin_replenish_ir
+{
+  DISK_NAME=$1
 }
 
 case $1 in
