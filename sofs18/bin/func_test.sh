@@ -20,7 +20,6 @@ if [ "$#" != "2" ]; then
   exit 1
 fi
 
-
 BOLD_BLUE="\033[1;34m"
 BOLD_RED="\033[1;31m"
 BOLD_GREEN="\033[1;32m"
