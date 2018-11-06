@@ -47,10 +47,6 @@ namespace sofs18
               if (blk != NullReference) 
               {
                 uint32_t rm = ffbn-(i+1)*(N_INDIRECT*ReferencesPerBlock+4);
-                //printf("%u\n", rm);
-                //printf("%u\n", blk);
-                //printf("%lu\n", (i+1)*(N_INDIRECT*ReferencesPerBlock+4));
-                //printf("%u\n", ffbn);
                 if (rm==0 || rm>ffbn) { del=soFreeDoubleIndirectFileBlocks(inode, blk, 0); }
                 else { del=soFreeDoubleIndirectFileBlocks(inode, blk, rm); }
                 if (del) 
