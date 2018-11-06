@@ -25,10 +25,9 @@ function call_menu
     echo -e "    -it   --- disables mksofs/fillInInodeTable test"
     echo -e "    -fblt --- disables mksofs/fillInFreeBlockListTable test"
     echo -e "    -rd   --- disables mksofs/fillInRootDir test"
+    echo -e "    -h    --- print help"
     exit 1
 }
-
-echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING MKSOFS${STOP}"
 
 Args=("$@")
 for arg in "${Args[@]}"; do
@@ -56,13 +55,19 @@ for arg in "${Args[@]}"; do
     -rd) 
       FLAG_RD=0
     ;;
-    
+   
+    -h)
+      call_menu
+    ;;
+
     *)
       echo $arg
       echo -e "Invalid Argument"
     ;;
   esac
 done
+
+echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING MKSOFS${STOP}"
 
 echo -en "${BOLD_BLUE}Size os disks (default=1M):${STOP} "
 read SIZE

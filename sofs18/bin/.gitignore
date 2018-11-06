@@ -10,4 +10,4 @@
 !test_addDirEntry
 !test_getFileBlock
 !test_mksofs.sh
-!file_blocks_test.sh
+!ffb_test.sh
