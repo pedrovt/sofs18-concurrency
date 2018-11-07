@@ -1,6 +1,5 @@
 #/bin/bash
 
-
 BOLD_BLUE="\033[1;34m"
 BOLD_RED="\033[1;31m"
 BOLD_GREEN="\033[1;32m"
@@ -64,9 +63,10 @@ if [ $FLAG_D -ne 0 ]; then
   diff calls_t calls_m > differences
   if [ -s differences ]; then
     echo -e "${BOLD_RED}Your calls differ from the teacher:${STOP}"
-    cat differences | sed -e 's/</Teacher Version:/g' | sed -e 's/>/| Your Version:/g'
+    cat differences | sed -e 's/</Teacher Version:/g' | sed -e 's/>/Your Version:/g'
   else
     echo -e "${BOLD_GREEN}No differences, you might have not screwed up!${STOP}"
+    rm calls_m calls_t differences
   fi
 fi
 
@@ -79,9 +79,10 @@ if [ $FLAG_I1 -ne 0 ]; then
   diff calls_t calls_m > differences
   if [ -s differences ]; then
     echo -e "${BOLD_RED}Your calls differ from the teacher:${STOP}"
-    cat differences | sed -e 's/</Teacher Version:/g' | sed -e 's/>/| Your Version:/g'
+    cat differences | sed -e 's/</Teacher Version:/g' | sed -e 's/>/Your Version:/g'
   else
     echo -e "${BOLD_GREEN}No differences, you might have not screwed up!${STOP}"
+    rm calls_m calls_t differences
   fi
 fi
 
@@ -94,8 +95,9 @@ if [ $FLAG_I2 -ne 0 ]; then
   diff calls_t calls_m > differences
   if [ -s differences ]; then
     echo -e "${BOLD_RED}Your calls differ from the teacher:${STOP}"
-    cat differences | sed -e 's/</Teacher Version:/g' | sed -e 's/>/| Your Version:/g'
+    cat differences | sed -e 's/</Teacher Version:/g' | sed -e 's/>/Your Version:/g'
   else
     echo -e "${BOLD_GREEN}No differences, you might have not screwed up!${STOP}"
+    rm calls_m calls_t differences
   fi
 fi

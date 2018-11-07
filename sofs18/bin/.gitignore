@@ -11,3 +11,4 @@
 !test_getFileBlock
 !test_mksofs.sh
 !ffb_test.sh
+!tp_test.sh
