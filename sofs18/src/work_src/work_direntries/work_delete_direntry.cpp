@@ -12,7 +12,6 @@
 namespace sofs18{
     namespace work{
         uint32_t soDeleteDirEntry(int pih, const char *name){
-        	printf("test");
             soProbe(203, "%s(%d, %s, %s)\n", __FUNCTION__, pih, name);
 
             /* change the following line by your code */
