@@ -12,6 +12,7 @@
 namespace sofs18{
     namespace work{
         uint32_t soDeleteDirEntry(int pih, const char *name){
+        	printf("test");
             soProbe(203, "%s(%d, %s, %s)\n", __FUNCTION__, pih, name);
 
             /* change the following line by your code */
@@ -27,11 +28,13 @@ namespace sofs18{
                 SODirEntry blockDirEntries[DirentriesPerBlock];				// array to store entries of a block
                 sofs18::soReadFileBlock(pih, i, blockDirEntries);			// read block to the array
                 for (uint32_t t = 0; t < DirentriesPerBlock; t++) {			// cycling each dirEntry
-                    targetDirEntry = blockDirEntries[i];
+                    targetDirEntry = blockDirEntries[t];
                     if (strcmp(name, targetDirEntry.name) == 0){			// targetDirEntry should have name equal to the name passed as argument
                     	uint32_t aux = targetDirEntry.in;
                         strcpy(targetDirEntry.name, "\0");		 			// delete its name
                         targetDirEntry.in = NullReference;
+                        blockDirEntries[t] = targetDirEntry;
+                        sofs18::soWriteFileBlock(pih, i, blockDirEntries);
                         return aux;                   						// return inode number of the dirEntry to delete
                     }	
                 }
