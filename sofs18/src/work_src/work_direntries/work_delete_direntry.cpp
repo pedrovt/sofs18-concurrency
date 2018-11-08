@@ -16,7 +16,7 @@ namespace sofs18
 
         uint32_t soDeleteDirEntry(int pih, const char *name)
         {
-            soProbe(203, "%s(%d, %s, %s)\n", __FUNCTION__, pih, name);
+            soProbe(203, "%s(%d, %s)\n", __FUNCTION__, pih, name);
 
             /* change the following line by your code */
             return bin::soDeleteDirEntry(pih, name);
