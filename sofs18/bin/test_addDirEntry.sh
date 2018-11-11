@@ -2,7 +2,7 @@
 
 if [ "$1" == "-b" ]; then
     echo -e "Using binary version\n"
-    ./createDisk dddd 1000 > /dev/null
+    ./createDisk dddd 58752 > /dev/null
     ./mksofs -b -n "binary" dddd > /dev/null
 
     freeInodes=$(./showblock dddd | grep "Number of free inodes" | sed 's/.*: //1')
@@ -32,7 +32,7 @@ if [ "$1" == "-b" ]; then
 
 else
     echo -e "Using work version\n"
-    ./createDisk dddd 1000 > /dev/null
+    ./createDisk dddd 58752 > /dev/null
     ./mksofs -b -n "work" dddd > /dev/null
 
     freeInodes=$(./showblock dddd | grep "Number of free inodes" | sed 's/.*: //1')
