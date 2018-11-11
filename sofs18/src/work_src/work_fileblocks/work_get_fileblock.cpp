@@ -98,13 +98,10 @@ namespace sofs18
             //printf("\tDouble Indirect.\n\t\tTrying to find i2 index %d\n", afbn);
 
             /* get double indirect index (i2[0] or i2[1]?) */
-            uint32_t iiIndex = afbn / (N_DOUBLE_INDIRECT * powerOfRefPerBlock);
+            uint32_t iiIndex = afbn / powerOfRefPerBlock;
             
             /* get position in i2[0]/i2[1] */
-            uint32_t iiPos = afbn / ReferencesPerBlock;
-
-            /* get index in the indirect referencing array */
-            uint32_t iIndex = afbn / ReferencesPerBlock;     
+            uint32_t iiPos = afbn / ReferencesPerBlock  - iiIndex * ReferencesPerBlock;
            
             /* get position in the indirect referencing array */
             uint32_t iPos = afbn % ReferencesPerBlock;
@@ -122,10 +119,6 @@ namespace sofs18
             uint32_t i2_array[ReferencesPerBlock];  // retrieve position in i2 -> indirect
             sofs18::soReadDataBlock(i2[iiPos], i2_array); // referencing array
 
-            uint32_t i2_i1[ReferencesPerBlock];     // retrieve position in the previous array
-            sofs18::soReadDataBlock(i2_array[iIndex], i2_i1);
-
-            //return i2_i1[iPos];
             return i2_array[iPos];
 
             /* original version */
