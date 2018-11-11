@@ -32,7 +32,6 @@ namespace sofs18{
             }
             uint32_t block;
             uint32_t maxIndirectIndex = (N_INDIRECT * ReferencesPerBlock) + N_DIRECT;
-            uint32_t maxDoubleIndirectIndex = (N_DOUBLE_INDIRECT * pow(ReferencesPerBlock, 2)) + maxIndirectIndex;
 
             if (fbn < N_DIRECT) 
             {
@@ -44,14 +43,13 @@ namespace sofs18{
             {										
               block=soAllocIndirectFileBlock(inode, fbn - N_DIRECT);
             }
-            else if (fbn >= maxIndirectIndex && fbn < maxDoubleIndirectIndex)
+            else
             {
-                block=soAllocDoubleIndirectFileBlock(inode, fbn - maxIndirectIndex);
+              block=soAllocDoubleIndirectFileBlock(inode, fbn - maxIndirectIndex);
             }
-            
+
             soITSaveInode(ih);
             return block;
-            //return bin::soAllocFileBlock(ih, fbn);
         }
         /* ********************************************************* */
         /*
