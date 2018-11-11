@@ -113,7 +113,7 @@ namespace sofs18
             uint32_t i2[ReferencesPerBlock * ReferencesPerBlock];   // retrieve i2[0]/i2[1]
             
             /* verify if i2[0]/i2[1] is null */
-            if (ip->i2[iiIndex])
+            if (ip->i2[iiIndex] == NullReference)
             {
                 return NullReference;
             }
