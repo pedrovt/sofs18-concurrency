@@ -76,6 +76,22 @@ namespace sofs18
                 }
               }
             }
+            for (int i = 0; i < N_DOUBLE_INDIRECT; i++)
+            {
+              uint32_t blk = inode->i2[i];
+              bool del=false;
+              if (blk != NullReference) 
+              {
+                uint32_t rm = ffbn-(i+1)*(N_INDIRECT*ReferencesPerBlock+4);
+                if (rm==0 || rm>ffbn) { del=soFreeDoubleIndirectFileBlocks(inode, blk, 0); }
+                else { del=soFreeDoubleIndirectFileBlocks(inode, blk, rm); }
+                if (del) 
+                { 
+                  inode->i2[i] = NullReference;
+                  sofs18::soFreeDataBlock(blk);
+                }
+              }
+            }
           }
           // if ffbn starts inside direct
           else
