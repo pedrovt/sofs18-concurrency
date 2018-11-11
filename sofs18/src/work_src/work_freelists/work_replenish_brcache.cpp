@@ -30,36 +30,37 @@ namespace sofs18{
 
             SOSuperBlock* sb = soSBGetPointer();           			// pointer to superblock 
 
-            if(sb->dz_free == 0)
-            {                                           // if there aren free data blocks
+            if(sb->dz_free == 0){                                   // if there aren free data blocks
                 throw SOException(EINVAL, __FUNCTION__);
             }
 
-            if((sb -> brcache).idx != BLOCK_REFERENCE_CACHE_SIZE)
-            {			// if cache not empty
+            if((sb -> brcache).idx != BLOCK_REFERENCE_CACHE_SIZE){			// if cache not empty
             	return;														// do nothing
             }
 
-            if ((sb -> fblt_head) != sb -> fblt_tail)
-            {												            // else if free block list table not empty
-                uint32_t numBlock = (sb -> fblt_head)/ReferencesPerBlock;                                       // block number
-                uint32_t posBlock = (sb -> fblt_head)%ReferencesPerBlock;                                       // first non NullReference in the block
-                uint32_t numRefsToMove = ReferencesPerBlock - posBlock;											// max number of references that can be copied from that block
-                uint32_t numRefsInFblt  = sb -> fblt_tail - sb -> fblt_head;									// max number of references that can be copied from the fblt
-              uint32_t* block = sofs18::soFBLTOpenBlock(numBlock);										    // open list head block
-              if (numRefsInFblt < numRefsToMove) {															// when max number of references that can be copied is greater than the number of references in the block
-                    numRefsToMove = numRefsInFblt;																// copy just the ones on the block
-                }
-                if (numRefsToMove >= BLOCK_REFERENCE_CACHE_SIZE){													// if there's enough references completely replenish the cache
-                    memcpy(&((sb -> brcache).ref), &block[posBlock], BLOCK_REFERENCE_CACHE_SIZE*sizeof(uint32_t));	// replenish retrieval cache with references from table
-                    memset(&block[posBlock], NullReference, BLOCK_REFERENCE_CACHE_SIZE*sizeof(uint32_t));			// resets table entries
+            if ((sb -> fblt_head) != sb -> fblt_tail){												            	// else if free block list table not empty
+            	uint32_t numBlock = (sb -> fblt_head)/ReferencesPerBlock;                                       	// block number
+              	uint32_t posBlock = (sb -> fblt_head)%ReferencesPerBlock;                                       	// first non NullReference in the block
+              	uint32_t numRefsToMove = ReferencesPerBlock - posBlock;												// max number of references that can be copied from that block
+              	uint32_t numRefsInFblt  = sb -> fblt_tail - sb -> fblt_head;										// max number of references that can be copied from the fblt
+              	uint32_t* block = sofs18::soFBLTOpenBlock(numBlock);										    	// open list head block
+              	if (numRefsInFblt < numRefsToMove) {																// when max number of references that can be copied is greater than the number of references in the block
+                    numRefsToMove = numRefsInFblt;																	// copy just the ones on the block
+              	}
+              	if (numRefsToMove >= BLOCK_REFERENCE_CACHE_SIZE){													// if there's enough references completely replenish the cache
+                    for (uint32_t i = 0; i < BLOCK_REFERENCE_CACHE_SIZE; i++){
+                        sb -> brcache.ref[i] = block[posBlock + i];													// replenish retrieval cache with references from table
+                        block[posBlock + i] = NullReference;														// resets table entries
+                    }
                     (sb -> brcache).idx = 0;																		// update idx
                     sb -> fblt_head += BLOCK_REFERENCE_CACHE_SIZE; 													// update fblt head
                 }
                 else {																								// copy to the end of the cache
                     uint32_t posCache = BLOCK_REFERENCE_CACHE_SIZE - numRefsToMove;									// position in the cache to end copying
-                    memcpy(&((sb -> brcache).ref[posCache]), &block[posBlock], numRefsToMove * sizeof(uint32_t));	// replenish retrieval cache with references from table
-                    memset(&block[posBlock], NullReference, numRefsToMove * sizeof(uint32_t));						// resets table entries
+                    for (uint32_t i = 0; i < numRefsToMove; i++){
+                        sb -> brcache.ref[posCache + i] = block[posBlock + i];										// replenish retrieval cache with references from table
+                        block[posBlock + i] = NullReference;														// resets table entries
+                    }
                     (sb -> brcache).idx = posCache;																	// update idx
                     sb -> fblt_head += numRefsToMove;																// update fblt head
                     if (sb -> fblt_head == sb -> fblt_tail) {
@@ -70,14 +71,15 @@ namespace sofs18{
                 soFBLTSaveBlock();					// save table head
             	soFBLTCloseBlock();					// close table head   
             }
-            else if((sb -> bicache).idx != 0)
-            {																													// else, insertion cache not empty
-            	memcpy(&((sb -> brcache).ref[BLOCK_REFERENCE_CACHE_SIZE - (sb -> bicache).idx]), (sb -> bicache).ref, (sb -> bicache).idx*sizeof(uint32_t));	// replenish retrieval cache with references from insertion cache
-            	memset(&((sb -> brcache).ref), NullReference, (sb -> bicache).idx*sizeof(uint32_t));															// resets insertion cache references //
+            else if((sb -> bicache).idx != 0){																													// else, insertion cache not empty
+            	for (uint32_t i = 0; i < BLOCK_REFERENCE_CACHE_SIZE; i++){
+                    sb -> brcache.ref[BLOCK_REFERENCE_CACHE_SIZE - sb -> bicache.idx + i] = sb -> bicache.ref[i];												// replenish retrieval cache with references from insertion cache
+                    sb -> bicache.ref[BLOCK_REFERENCE_CACHE_SIZE - sb -> bicache.idx + i] = NullReference;														// resets insertion cache entries
+                }									
                 (sb -> brcache).idx += BLOCK_REFERENCE_CACHE_SIZE - (sb -> bicache).idx;                                                           				// update idx
                 (sb -> bicache).idx = 0;                                                           																// update idx
             }
-            soSBSave();							// save superblock
+            soSBSave();								// save superblock
         }
     };
 };
