@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <math.h>
 #include <iostream>
+#include <cstring>
 
 namespace sofs18{
     namespace work{
@@ -17,35 +18,39 @@ namespace sofs18{
 		/* Associate a data block to the given file block position.
 		   Parameters:
 		      ih	inode handler.
-		      fbn	file block number.
+		      fbn	file block pos.
 		   Returns:
 		      the number of the allocated block.
 		*/
         uint32_t soAllocFileBlock(int ih, uint32_t fbn){
             soProbe(302, "%s(%d, %u)\n", __FUNCTION__, ih, fbn);
-            /* change the following two lines by your code */
 
             SOInode* inode = soITGetInodePointer(ih);
-            if (fbn > N_DOUBLE_INDIRECT * pow(ReferencesPerBlock, 2) + N_INDIRECT * ReferencesPerBlock + N_DIRECT){
-                throw SOException(EINVAL, __FUNCTION__);    
+            if (fbn > N_DOUBLE_INDIRECT * pow(ReferencesPerBlock, 2) + N_INDIRECT * ReferencesPerBlock + N_DIRECT)
+            {
+              throw SOException(EINVAL, __FUNCTION__);    
             }
-
-            if (fbn < N_DIRECT) {																			// if block is directly referencied (d)
-                return sofs18::soAllocDataBlock();															// alloc file block (from the cache) ??
-                // there should be something to do with the fbn
-                // Associate a data block !to the given file block position!
-            }
-
+            uint32_t block;
             uint32_t maxIndirectIndex = (N_INDIRECT * ReferencesPerBlock) + N_DIRECT;
             uint32_t maxDoubleIndirectIndex = (N_DOUBLE_INDIRECT * pow(ReferencesPerBlock, 2)) + maxIndirectIndex;
-            if (fbn < maxIndirectIndex) {																	// if block is indirectly referencied (i1)
-                return soAllocIndirectFileBlock(inode, fbn - N_DIRECT);
-            }
 
-            else if (fbn < maxDoubleIndirectIndex){															// if block is double indirectly referencied (i2)
-                return soAllocDoubleIndirectFileBlock(inode, fbn - maxIndirectIndex);
+            if (fbn < N_DIRECT) 
+            {
+              block=sofs18::soAllocDataBlock();
+              inode->d[fbn]=block;
+              inode->blkcnt++;
+            }
+            else if (fbn >=N_DIRECT && fbn < maxIndirectIndex) 
+            {										
+              block=soAllocIndirectFileBlock(inode, fbn - N_DIRECT);
+            }
+            else if (fbn >= maxIndirectIndex && fbn < maxDoubleIndirectIndex)
+            {
+                block=soAllocDoubleIndirectFileBlock(inode, fbn - maxIndirectIndex);
             }
             
+            soITSaveInode(ih);
+            return block;
             //return bin::soAllocFileBlock(ih, fbn);
         }
         /* ********************************************************* */
@@ -53,20 +58,85 @@ namespace sofs18{
          */
         static uint32_t soAllocIndirectFileBlock(SOInode * ip, uint32_t afbn){
             soProbe(302, "%s(%d, ...)\n", __FUNCTION__, afbn);
-            /* change the following two lines by your code */
+            
+            // allocating block in i1
+            uint32_t pos = afbn/ReferencesPerBlock;
+            uint32_t refs[ReferencesPerBlock];
+            uint32_t blk_i1;
+            if (ip->i1[pos]==NullReference)
+            {
+              blk_i1 = sofs18::soAllocDataBlock();
+              ip->blkcnt++;
+              ip->i1[pos]=blk_i1;
+              memset(&refs, NullReference, ReferencesPerBlock*sizeof(uint32_t));
+              soWriteDataBlock(blk_i1, &refs);
+            }
+            else
+            {
+              blk_i1=ip->i1[pos];
+              soReadDataBlock(blk_i1, &refs);
+            }
+            
+            // allocating block in i1_block
+            uint32_t pos_blk = afbn - ReferencesPerBlock*pos;
+            uint32_t blk_data=sofs18::soAllocDataBlock();
+            refs[pos_blk] = blk_data;
+            soWriteDataBlock(blk_i1, &refs);
+            ip->blkcnt++;
 
-            throw SOException(ENOSYS, __FUNCTION__); 
-            return 0;
+            return blk_data;
         }
         /* ********************************************************* */
         /*
          */
         static uint32_t soAllocDoubleIndirectFileBlock(SOInode * ip, uint32_t afbn){
             soProbe(302, "%s(%d, ...)\n", __FUNCTION__, afbn);
-            /* change the following two lines by your code */
+            
+            // allocating the i2 blk
+            uint32_t pos_i2 = afbn/pow(ReferencesPerBlock, 2);
+            uint32_t blk_i2;
+            uint32_t refs_i2[ReferencesPerBlock];
+            if (ip->i2[pos_i2]==NullReference)
+            {
+              blk_i2 = sofs18::soAllocDataBlock();
+              ip->blkcnt++;
+              ip->i2[pos_i2] = blk_i2;
+              memset(&refs_i2, NullReference, ReferencesPerBlock*sizeof(uint32_t));
+              soWriteDataBlock(blk_i2, &refs_i2);
+            }
+            else
+            {
+              blk_i2 = ip->i2[pos_i2];
+              soReadDataBlock(blk_i2, &refs_i2);
+            }
+            
+            // allocating block in i2_block
+            uint32_t pos_i_blk = afbn/ReferencesPerBlock - pos_i2*ReferencesPerBlock;
+            uint32_t refs[ReferencesPerBlock];
+            uint32_t blk_refs;
+            if (refs_i2[pos_i_blk] == NullReference)
+            {
+              blk_refs = sofs18::soAllocDataBlock();
+              ip->blkcnt++;
+              refs_i2[pos_i_blk] = blk_refs;
+              memset(&refs, NullReference, ReferencesPerBlock*sizeof(uint32_t));
+              soWriteDataBlock(blk_refs, &refs);
+            }
+            else
+            {
+              blk_refs = refs_i2[pos_i_blk];
+              soReadDataBlock(blk_refs, &refs);
+            }
+            
+            // allocating block in i2_block_refs
+            uint32_t pos_refs = afbn - pos_i2*ReferencesPerBlock - pos_i_blk*ReferencesPerBlock;
+            uint32_t blk = sofs18::soAllocDataBlock();
+            refs[pos_refs] = blk;
+            ip->blkcnt++;
+            soWriteDataBlock(blk_refs, &refs);
+            soWriteDataBlock(blk_i2, &refs_i2);
 
-            throw SOException(ENOSYS, __FUNCTION__); 
-            return 0;
+            return blk;
         }
     };
 };
