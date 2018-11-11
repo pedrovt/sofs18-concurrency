@@ -158,6 +158,7 @@ function check_bin_alloc_inode
   diff t2.txt m2.txt > b
   if [ -s a ]; then
     echo -e "${BOLD_RED}Your calls differ from the teacher!${STOP}"
+    cat a | sed -e 's/>/Your version:/g' | sed -e 's/</Teacher Version:/g'
   else
     echo -e "${BOLD_GREEN}Your calls coincide with the teacher version!${STOP}"
     rm t1.txt m1.txt a
@@ -221,8 +222,8 @@ function check_bin_deplete_bi
 
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING FREELISTS/DEPLETE_BI_CACHE:${STOP}"
   
-  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 3 cases:"
-  echo -e "\tIf regular deplete\n\tIf filt has not enough space\n\tIf it has freed the tail once"
+  echo -e "${REGULAR}Showing what diffs in dal calls between teacher and yours in the 2 cases:"
+  echo -e "\tIf regular deplete\n\tIf filt has not enough space"
  
   # test regular deplete
   echo -e "${BOLD_BLINKING_INVERTED}NOW TESTING CASE 1 (REGULAR DEPLETE):${STOP}"
