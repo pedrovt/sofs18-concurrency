@@ -21,11 +21,22 @@ namespace sofs18
         {
             soProbe(221, "%s(%s)\n", __FUNCTION__, path);
            
-            char *parent_dir = dirname(strdup(path));
-            char *base_dir = basename(strdup(path));
+            char *parent_dir = dirname(strdupa(path));
+            char *base_dir = basename(strdupa(path));
             if (strcmp(base_dir, parent_dir)==0) { return 0; }
             uint32_t parent_inode = soTraversePath(parent_dir);
-            return sofs18::soGetDirEntry(soITOpenInode(parent_inode), base_dir);
+            int ih = soITOpenInode(parent_inode);
+            if (soCheckInodeAccess(ih, 1))
+            {
+              uint32_t dir=sofs18::soGetDirEntry(ih,base_dir);
+              soITCloseInode(ih);
+              if (dir != NullReference)
+              {
+                return dir;
+              }
+              throw SOException(ENOENT, __FUNCTION__);
+            }
+            throw SOException(EACCES, __FUNCTION__);
         }
     };
 };
