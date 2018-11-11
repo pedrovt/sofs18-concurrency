@@ -64,7 +64,7 @@ else
     echo -e "Allocing blocks...\n"
     for i in $(seq 1 $((freeBlocks - 1))); do
         #echo -e "ade\n0\n$i\n1\n" 
-        echo -e "afb\n0\n$i\nq" | ./testtool dddd -q1 -b -r 301-301 -p 0-0 | sed -e 's/^$prefix//' -e 's/$suffix$//' #>> alloc_results 
+        echo -e "afb\n0\n$i\nq" | ./testtool dddd -q1 -b -r 301-301 -p 301-301 >> alloc_results 
     done
 
     echo -e "\n===============================\n"
@@ -82,7 +82,7 @@ else
     echo -e "Retrieving blocks...\n"
     for i in $(seq 1 $((freeBlocks - 1))); do
         #echo -e "ade\n0\n$i\n1\n" 
-        echo -e "gfb\n0\n$i\nq" | ./testtool dddd -q1 -b -r 301-301 -p 301-301 | sed -e 's/^$prefix//' -e 's/$suffix$//' #>> get_results
+        echo -e "gfb\n0\n$i\nq" | ./testtool dddd -q1 -b -r 301-301 -p 301-301  >> get_results
     done
 
     #retrieve non existing block

@@ -5,10 +5,12 @@
 !.gitignore
 !createDisk
 !func_test.sh
-!test_ric
-!test_ric2
-!test_addDirEntry
-!test_getFileBlock
+!test_ric.sh
+!test_ric2.sh
+!test_ric3.sh
+!test_addDirEntry.sh
+!test_getFileBlock.sh
 !test_mksofs.sh
 !ffb_test.sh
 !tp_test.sh
+!afb_test.sh
