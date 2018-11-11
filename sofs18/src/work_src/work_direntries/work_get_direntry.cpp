@@ -9,6 +9,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#define INODE_REF_SIZE 4
+
 namespace sofs18
 {
     namespace work
@@ -28,14 +30,13 @@ namespace sofs18
 			if not throw an exception*/
 			SOInode* parent_inode = sofs18::soITGetInodePointer(pih);
 			if(!S_ISDIR(parent_inode -> mode)){
-				//perguntar ao stor. o erro nao existe
-
-				//throw SOException(ENODIR, __FUNCTION__);
-				throw SOException(20, __FUNCTION__);
+				throw SOException(ENOTDIR, __FUNCTION__);
 			}
-		
-			//search in the directly adressed blocks
-			for(uint32_t w=0; w<N_DIRECT; w++){
+
+			uint32_t blocks_to_iterate = (parent_inode -> size)/BlockSize;
+			printf("N allocated blocks : %d \n",blocks_to_iterate);
+
+			for(uint32_t w=0; w<blocks_to_iterate; w++){
 				//read the direntries block
 				char buffer[BlockSize];
 				sofs18::soReadFileBlock(pih,w,buffer);
@@ -43,16 +44,16 @@ namespace sofs18
 				//go through each line
 				for(uint32_t i=0; i<DirentriesPerBlock; i++){
 					
-					//the first 4 bytes are the name of the inode
+					//the first INODE_REF_SIZE bytes are the number of the inode
 					uint32_t inode_number = 0;
-					for(int k=0; k<4; k++){
+					for(int k=0; k<INODE_REF_SIZE; k++){
 						inode_number += buffer[k + i*sizeof(SODirEntry)] << 8*k;
 					}
 
 					//the rest of the bytes are the base name of the link
-					char string[sizeof(SODirEntry) - 4];
+					char string[sizeof(SODirEntry) - INODE_REF_SIZE];
 					int index = 0;
-					for(uint32_t j=4; j<sizeof(SODirEntry); j++){
+					for(uint32_t j=INODE_REF_SIZE; j<sizeof(SODirEntry); j++){
 						string[index] =  buffer[j + i*sizeof(SODirEntry)];
 						index +=1;
 					}
@@ -62,7 +63,9 @@ namespace sofs18
 					}	
 				
 				}
+			
 			}
+
 						
 			//return NullReference if we didn't find the dir entry
 			return NullReference;
