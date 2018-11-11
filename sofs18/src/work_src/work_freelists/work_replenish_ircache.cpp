@@ -84,15 +84,15 @@ namespace sofs18
                 if (numRefsToMove >= INODE_REFERENCE_CACHE_SIZE)
                 {
                     //printf("\t\tEnough references on FILT. Replenish will be full.\n");
-                    uint32_t numBytes = INODE_REFERENCE_CACHE_SIZE * sizeof(uint32_t);
 
-                    // Copy from FILT to cache
-                    memcpy(&(sb -> ircache), &block[posBlock], numBytes);
+                    // Move (copy + remove) from FILT to cache
+                    for (uint32_t i = 0; i < INODE_REFERENCE_CACHE_SIZE; i++)
+                    {
+                        sb -> ircache.ref[i] = block[posBlock + i];
+                        block[posBlock + i] = NullReference;
+                    }
 
-                    // Remove from FILT 
-                    memset(&block[posBlock], NullReference, numBytes);
-
-                    // Update counters
+                    // Update countersnumBytes
                     sb -> ircache.idx = 0;
                     //printf("FILTHEAD: %d", sb->filt_head);
                     sb -> filt_head = sb -> filt_head + INODE_REFERENCE_CACHE_SIZE;
@@ -104,14 +104,14 @@ namespace sofs18
                     //printf("\t\tNot enough references on FILT. Replenish will be partial.\n");
                     //printf("\t\tnumRefsToMove= %d\n", numRefsToMove);
                     //printf("\t\tfilt head= %d filt tail= %d\n", sb -> filt_head, sb -> filt_tail);
-                    uint32_t numBytes = numRefsToMove * sizeof(uint32_t);
                     uint32_t posCache = INODE_REFERENCE_CACHE_SIZE - numRefsToMove;
 
-                    // Copy from FILT to cache
-                    memcpy(&((sb -> ircache).ref[posCache]), &block[posBlock], numBytes);
-
-                    // Remove from FILT
-                    memset(&block[posBlock], NullReference, numBytes);
+                    // Move from FILT to cache
+                    for (uint32_t i = 0; i < numRefsToMove; i++)
+                    {
+                        sb->ircache.ref[posCache + i] = block[posBlock + i];
+                        block[posBlock + i] = NullReference;
+                    }
 
                     // Update counters
                     sb -> ircache.idx = posCache;
@@ -135,19 +135,17 @@ namespace sofs18
             if (iicache.idx != 0)
             {
                 //printf("\tReplenishing from insertion cache\n");
-                uint32_t numBytes = iicache.idx * sizeof(uint32_t);
                 uint32_t posCache = INODE_REFERENCE_CACHE_SIZE - iicache.idx;
 
-                // Copy from iicache
-                // todo use a for
-                memcpy(&(sb-> ircache).ref[posCache], iicache.ref, numBytes);
-
-                // Remove from iicache
-                memset(&(sb -> iicache.ref), NullReference, numBytes);
+                // Move from iicache to ircache
+                for (uint32_t i = 0; i < INODE_REFERENCE_CACHE_SIZE; i++)
+                {
+                    sb -> ircache.ref[posCache + i] = sb -> iicache.ref[i];
+                    sb -> iicache.ref[posCache + i] = NullReference;
+                }
 
                 // Update counters
                 sb -> ircache.idx = posCache;
-                //sb -> filt_head = sb-> filt_head + INODE_REFERENCE_CACHE_SIZE - iicache.idx;
                 sb -> iicache.idx = 0;
 
                 soSBSave();
