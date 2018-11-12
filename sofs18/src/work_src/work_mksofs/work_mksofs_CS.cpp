@@ -34,26 +34,28 @@ namespace sofs18
             if(max_itotal == 0) max_itotal = 8; // Permita ao user criar discos com menos de 32 blocos mesmo que obrigue que os inodes > 1/4 blocos totais
             itotal = (itotal == 0) ? roundUp(ntotal >> 3, 8) : (itotal > max_itotal) ? max_itotal : roundUp(itotal, 8);
             
-            uint32_t blocksLeftData = ntotal - 1 - (roundUp(itotal, 128) >> 7) - (itotal >> 3); // ntotal - sb - blocos ocupados por inodes - blocos ocupados por referencias a free inodes
-            uint32_t dataReferences = blocksLeftData >> 7; // O nr de referencias minimo para inodes vai ser blocos que faltam / 128
-            uint32_t blocksLeft = blocksLeftData - (dataReferences << 7) - dataReferences; 
+            uint32_t blocksLeftData = ntotal - 1 - (roundUp(itotal, ReferencesPerBlock) >> 7) - (itotal >> 3); // ntotal - sb - blocos ocupados por inodes - blocos ocupados por referencias a free inodes
+            btotal = blocksLeftData*ReferencesPerBlock/(ReferencesPerBlock + 1); // DATA_BLOCKS = N * RPB / RPB + 1  (Das equacoes N = DATA_BLOCKS + FILT_BLOCKS e FILT_BLOCKS = DATA_BLOCKS / RPB)
+            uint32_t dataReferences = (uint32_t)ceil(btotal/(float)ReferencesPerBlock); // DATA_BLOCKS / 128 arredondado para cima
+            uint32_t blocksLeft = blocksLeftData - (btotal + dataReferences); 
+
             // Caso em que ira faltar um bloco para por, mas o nr de blocos de data livre ja e multiplo de 128. 
             // Logo ao adicionar la iria necessitar de aumentar o nr de blocos para free inodes
             if(blocksLeft == 1) { 
-                btotal = blocksLeftData - (uint32_t)dataReferences;
-                if(itotal % 128 != 0) {  // Se os inodes ja forem multiplos de 128 o root tem de ficar com 2 blocos de data
-                    itotal++;
+                printf("%d\n", itotal);
+                if(itotal % ReferencesPerBlock != 0) {  // Se os inodes ja forem multiplos de 128 o root tem de ficar com 2 blocos de data
+                    itotal += 8;
                     rdsize = 1;
                 } else rdsize = 2;
             } else {
                 rdsize = 1;
-                // Caso em que faltam 0 blocos para por depois de retirar o nr de blocos para dados e referencias
-                // (Casos em que as referencias ficam preenchidas perfeitamente, sem a existencia de null references)
-                if(blocksLeft < 1) btotal = blocksLeftData - (uint32_t)dataReferences;
-                // Casos em que faltem mais do que um bloco, e necessario aumentar o nr de blocos para referencias por um
-                // E o resto para blocos
-                else if(blocksLeft > 1) btotal = blocksLeftData - (dataReferences + 1);
             }
+
+            /* printf("%d\n", blocksLeftData);
+            printf("%d\n", btotal);
+            printf("%d\n", dataReferences);
+            printf("%d\n", blocksLeft); */
+
             //bin::computeStructure(ntotal, itotal, btotal, rdsize);
         }
 

@@ -45,7 +45,7 @@ namespace sofs18
             // Turns the cache coppied into NullReference
             memset(&(sb->iicache.ref), NullReference, refsToCopy * sizeof(uint32_t));
 
-            // Moves the cache that could not be removed to the start of the cache
+            // Moves the cache that could not be moved to the start of the cache
             if(blockFull) {
                 int index = 0;
                 for(uint32_t i = refsToCopy; i < sb->iicache.idx; i++) {
