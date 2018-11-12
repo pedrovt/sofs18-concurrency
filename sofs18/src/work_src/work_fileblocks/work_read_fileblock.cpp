@@ -19,6 +19,8 @@ namespace sofs18
             uint32_t block_number = sofs18::soGetFileBlock(ih, fbn);
             if(block_number != NullReference) 
                 sofs18::soReadDataBlock(block_number, buf);
+            else
+                memset(buf, '\0', 512);
             //bin::soReadFileBlock(ih, fbn, buf);
         }
 
