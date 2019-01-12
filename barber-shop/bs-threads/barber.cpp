@@ -152,6 +152,8 @@ static void sit_in_barber_bench(Barber* barber)
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
    require (!seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber already seated in barber shop");
 
+   barber->benchPosition = random_sit_in_barber_bench(&barber->shop->barberBench, barber->id);
+
    log_barber(barber);
 }
 
@@ -164,6 +166,16 @@ static void wait_for_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
+
+   barber->state = WAITING_CLIENTS;
+   //log to see that barber is waiting. in case we have to wait for someone to come in
+   log_barber(barber);
+
+   while(num_available_benches_seats(&barber->shop->clientBenches) == barber->shop->numClientBenchesSeats);
+   RQItem client = next_client_in_benches(&barber->shop->clientBenches);
+   barber->clientID = client.clientID;
+
+   receive_and_greet_client(barber->shop, barber->id, client.clientID);
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 }
@@ -187,6 +199,9 @@ static void rise_from_barber_bench(Barber* barber)
 
    require (barber != NULL, "barber argument required");
    require (seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber not seated in barber shop");
+
+   rise_barber_bench(&barber->shop->barberBench, barber->benchPosition);
+   barber->benchPosition = -1;
 
    log_barber(barber);
 }
@@ -223,6 +238,8 @@ static void release_client(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   client_done(barber->shop, barber->clientID);
+
    log_barber(barber);
 }
 
@@ -232,6 +249,8 @@ static void done(Barber* barber)
     * 1: set the client state to DONE
     **/
    require (barber != NULL, "barber argument required");
+
+   barber->state = DONE;
 
    log_barber(barber);
 }
@@ -255,6 +274,7 @@ static void process_haircut_request(Barber* barber)
       if (complete > 100)
          complete = 100;
       set_completion_barber_chair(barber_chair(barber->shop, barber->chairPosition), complete);
+      log_barber(barber);
    }
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!

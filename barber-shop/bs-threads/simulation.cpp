@@ -89,6 +89,10 @@ static void go()
    for(int i = 0; i < global->NUM_CLIENTS; i++)
       log_client(allClients+i);
 
+   //start the barbers
+   for(int i=0; i< global->NUM_BARBERS; i++)
+      main_barber(&allBarbers[i]);
+
 }
 
 /**
