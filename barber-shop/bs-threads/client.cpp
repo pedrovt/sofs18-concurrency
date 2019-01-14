@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "service.h"
 #include "client.h"
+#include "barber-shop.h"
 
 enum ClientState
 {
@@ -178,6 +179,9 @@ static void wandering_outside(Client* client)
 
    require (client != NULL, "client argument required");
 
+   client->state = WANDERING_OUTSIDE;
+   spend(random_int(global->MIN_OUTSIDE_TIME_UNITS, global->MAX_OUTSIDE_TIME_UNITS));
+
    log_client(client);
 }
 
@@ -190,7 +194,11 @@ static int vacancy_in_barber_shop(Client* client)
 
    require (client != NULL, "client argument required");
 
+   client->state = WAITING_BARBERSHOP_VACANCY;
+      
    int res = 0;
+   if(num_available_benches_seats(client_benches(client->shop)) > 0) 
+      res = 1;
 
    log_client(client);
    return res;
@@ -205,6 +213,10 @@ static void select_requests(Client* client)
 
    require (client != NULL, "client argument required");
 
+   client->state = SELECTING_REQUESTS;
+   int combinations[7] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ, HAIRCUT_REQ | WASH_HAIR_REQ, HAIRCUT_REQ | SHAVE_REQ, WASH_HAIR_REQ | SHAVE_REQ, HAIRCUT_REQ | WASH_HAIR_REQ | SHAVE_REQ};
+   client->requests = combinations[rand() % 7];
+
    log_client(client);
 }
 
@@ -218,6 +230,9 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
+   client->state = WAITING_ITS_TURN;
+   enter_barber_shop(client->shop, client->id, client->requests);
+
    log_client(client);
 }
 
@@ -230,6 +245,7 @@ static void rise_from_client_benches(Client* client)
    require (client != NULL, "client argument required");
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
+
 
    log_client(client);
 }
