@@ -15,6 +15,10 @@
 #include "service.h"
 #include "client-benches.h"
 
+#include <iostream>
+#include <map>
+
+
 typedef struct _BarberShop_
 {
    int numBarbers;
@@ -38,6 +42,7 @@ typedef struct _BarberShop_
 
    int numClientsInside;
    int clientsInside[MAX_CLIENTS];
+   std::map<int, int> greetings;
 
    int opened;
 

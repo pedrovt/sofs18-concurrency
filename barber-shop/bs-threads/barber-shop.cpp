@@ -8,6 +8,11 @@
 #include "global.h"
 #include "barber-shop.h"
 
+
+static pthread_mutex_t accessCR = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_cond_t greet = PTHREAD_COND_INITIALIZER;
+
 /* TODO: take a careful look to all the non static (public) functions, to check
  * if a proper synchronization is needed.
  */
@@ -302,6 +307,8 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
     * Function called from a client when entering the barbershop
     **/
 
+   pthread_mutex_lock(&accessCR);
+
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
@@ -311,6 +318,9 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop->clientsInside[shop->numClientsInside++] = clientID;
    return res;
+   
+   pthread_mutex_unlock(&accessCR);
+
 }
 
 void leave_barber_shop(BarberShop* shop, int clientID)
@@ -339,23 +349,33 @@ void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
     * it must send the barber ID to the client
     **/
 
+   pthread_mutex_lock(&accessCR);
+
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
+   shop->greetings[clientID] = barberID;
+   pthread_cond_signal(&greet);
+   
+   pthread_mutex_unlock(&accessCR);
 
 }
-
 int greet_barber(BarberShop* shop, int clientID)
 {
    /** TODO:
     * function called from a client, expecting to receive its barber's ID
     **/
+   pthread_mutex_lock(&accessCR);
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   int res = 0;
-   return res;
+   while(shop->greetings.find(clientID) == shop->greetings.end())
+      pthread_cond_wait(&greet, &accessCR);
+   return shop->greetings[clientID];
+   
+   pthread_mutex_unlock(&accessCR);
+
 }
 
 int shop_opened(BarberShop* shop)

@@ -231,9 +231,11 @@ static void wait_its_turn(Client* client)
    require (client != NULL, "client argument required");
 
    client->state = WAITING_ITS_TURN;
-   enter_barber_shop(client->shop, client->id, client->requests);
-
    log_client(client);
+   
+   client->benchesPosition = enter_barber_shop(client->shop, client->id, client->requests);
+   client->barberID = greet_barber(client->shop, client->id);
+
 }
 
 static void rise_from_client_benches(Client* client)
@@ -243,9 +245,10 @@ static void rise_from_client_benches(Client* client)
     **/
 
    require (client != NULL, "client argument required");
-   require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
 
+   rise_client_benches(client_benches(client->shop), client->benchesPosition, client->id);
+   client->benchesPosition = -1;
 
    log_client(client);
 }
