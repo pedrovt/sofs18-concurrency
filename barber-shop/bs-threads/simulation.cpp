@@ -21,6 +21,8 @@
 #include "barber.h"
 #include "client.h"
 
+#include "queue.h"
+
 static BarberShop *shop;
 static Barber* allBarbers = NULL;
 static Client* allClients = NULL;
@@ -89,12 +91,47 @@ static void go()
    for(int i = 0; i < global->NUM_CLIENTS; i++)
       log_client(allClients+i);
 
-   //start the barbers
-   for(int i=0; i< global->NUM_CLIENTS; i++) {
-      main_client(&allClients[i]);
+   // Launching barber threads
+   pthread_t bthr[global->NUM_BARBERS];
+   int i;
+   for(i=0; i<global->NUM_BARBERS; i++) {
+      if (pthread_create(&bthr[i], NULL, main_barber, &allBarbers[i]) != 0)
+        {
+            fprintf(stderr, "Barber %d\n", i);
+            perror("Error on launching the barber thread");
+            return;
+        }
    }
-   for(int i=0; i< global->NUM_CLIENTS; i++) {
-      main_barber(&allBarbers[i]);
+
+   // Launching client threads
+   pthread_t cthr[global->NUM_CLIENTS];
+   for(i=0; i<global->NUM_CLIENTS; i++) {
+      if (pthread_create(&cthr[i], NULL, main_client, &allClients[i]) != 0)
+        {
+            fprintf(stderr, "Client %d\n", i);
+            perror("Error on launching the client thread");
+            return;
+        }
+   }
+
+   // Waiting for threads
+   for(i=0; i<global->NUM_BARBERS; i++) {
+      if (pthread_join(bthr[i], NULL) != 0)
+      {
+         fprintf(stderr, "Barber %d\n", i);
+         perror("Error on waiting for a thread to conclude");
+         return;
+      }
+      printf("Client thread %d has terminated\n", i);
+   }
+   for(i=0; i<global->NUM_CLIENTS; i++) {
+      if (pthread_join(cthr[i], NULL) != 0)
+      {
+         fprintf(stderr, "Client %d\n", i);
+         perror("Error on waiting for a thread to conclude");
+         return;
+      }
+      printf("Client thread %d has terminated\n", i);
    }
 
 }
