@@ -15,9 +15,11 @@
 #include "service.h"
 #include "client-benches.h"
 
-#include <iostream>
-#include <map>
-
+extern pthread_mutex_t accessCR;
+extern pthread_mutex_t enterCR;
+extern pthread_cond_t enter;
+extern pthread_cond_t greet;
+extern pthread_cond_t rise;
 
 typedef struct _BarberShop_
 {
@@ -42,7 +44,7 @@ typedef struct _BarberShop_
 
    int numClientsInside;
    int clientsInside[MAX_CLIENTS];
-   std::map<int, int> greetings;
+   int greeting[2] = {0, 0}; 
 
    int opened;
 

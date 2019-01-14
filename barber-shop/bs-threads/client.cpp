@@ -141,6 +141,7 @@ static void life(Client* client)
          select_requests(client);
          wait_its_turn(client);
          rise_from_client_benches(client);
+         spend(100000);
          wait_all_services_done(client);
          i++;
       }
@@ -180,9 +181,9 @@ static void wandering_outside(Client* client)
    require (client != NULL, "client argument required");
 
    client->state = WANDERING_OUTSIDE;
+   log_client(client);
    spend(random_int(global->MIN_OUTSIDE_TIME_UNITS, global->MAX_OUTSIDE_TIME_UNITS));
 
-   log_client(client);
 }
 
 static int vacancy_in_barber_shop(Client* client)
@@ -192,8 +193,10 @@ static int vacancy_in_barber_shop(Client* client)
     * 2: check if there is an empty seat in the client benches (at this instante, later on it may fail)
     **/
 
-   require (client != NULL, "client argument required");
+   // Zona critica, ver se existe lugares enquanto alguem se senta
+   pthread_mutex_lock(&enterCR); 
 
+   require (client != NULL, "client argument required");
    client->state = WAITING_BARBERSHOP_VACANCY;
       
    int res = 0;
@@ -201,6 +204,9 @@ static int vacancy_in_barber_shop(Client* client)
       res = 1;
 
    log_client(client);
+
+   pthread_mutex_unlock(&enterCR);
+   
    return res;
 }
 
@@ -216,7 +222,6 @@ static void select_requests(Client* client)
    client->state = SELECTING_REQUESTS;
    int combinations[7] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ, HAIRCUT_REQ | WASH_HAIR_REQ, HAIRCUT_REQ | SHAVE_REQ, WASH_HAIR_REQ | SHAVE_REQ, HAIRCUT_REQ | WASH_HAIR_REQ | SHAVE_REQ};
    client->requests = combinations[rand() % 7];
-
    log_client(client);
 }
 
@@ -232,9 +237,10 @@ static void wait_its_turn(Client* client)
 
    client->state = WAITING_ITS_TURN;
    log_client(client);
-   
+
    client->benchesPosition = enter_barber_shop(client->shop, client->id, client->requests);
    client->barberID = greet_barber(client->shop, client->id);
+   log_client(client);
 
 }
 
@@ -244,6 +250,8 @@ static void rise_from_client_benches(Client* client)
     * 1: (exactly what the name says)
     **/
 
+   pthread_mutex_lock(&enterCR);
+
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
 
@@ -251,6 +259,10 @@ static void rise_from_client_benches(Client* client)
    client->benchesPosition = -1;
 
    log_client(client);
+
+   pthread_cond_signal(&rise);
+
+   pthread_mutex_unlock(&enterCR);
 }
 
 static void wait_all_services_done(Client* client)

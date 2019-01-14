@@ -134,10 +134,11 @@ static void life(Barber* barber)
    while(work_available(barber)) // no more possible clients and closes barbershop
    {
       rise_from_barber_bench(barber);
+      spend(10000000);
       process_resquests_from_client(barber);
-      release_client(barber);
+      /* release_client(barber);
       sit_in_barber_bench(barber);
-      wait_for_client(barber);
+      wait_for_client(barber); */
    }
    done(barber);
 }
@@ -165,21 +166,28 @@ static void wait_for_client(Barber* barber)
     * 3: receive and greet client (receive its requested services, and give back the barber's id)
     **/
 
+   // Zona critica, dois barbeiros a aceder a fila de clientes ao mesmo tempo
+   pthread_mutex_lock(&enterCR);
+
    require (barber != NULL, "barber argument required");
 
    barber->state = WAITING_CLIENTS;
    //log to see that barber is waiting. in case we have to wait for someone to come in
    log_barber(barber);
 
-   while(num_available_benches_seats(&barber->shop->clientBenches) == barber->shop->numClientBenchesSeats);
+   while(num_available_benches_seats(client_benches(barber->shop)) == barber->shop->numClientBenchesSeats)
+      pthread_cond_wait(&enter, &enterCR);
 
    RQItem client = next_client_in_benches(client_benches(barber->shop));
    barber->clientID = client.clientID;
    barber->reqToDo = client.request;
-
-   receive_and_greet_client(barber->shop, barber->id, barber->clientID);
-
    log_barber(barber);  // (if necessary) more than one in proper places!!!
+
+   receive_and_greet_client(barber->shop, barber->id, client.clientID);
+   pthread_cond_signal(&greet);
+
+   pthread_mutex_unlock(&enterCR);
+
 }
 
 static int work_available(Barber* barber)
@@ -228,6 +236,16 @@ static void process_resquests_from_client(Barber* barber)
 
 
    require (barber != NULL, "barber argument required");
+
+   int services[3] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ};
+   int states[3] = {WAITING_BARBER_SEAT, WAITING_WASHBASIN, WAITING_BARBER_SEAT};
+    
+   for(int i=0; i < 3; i++) {
+      if(barber->reqToDo != 0) {
+         barber->state = states[i];
+         log_barber(barber);
+      }
+   }
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 }
