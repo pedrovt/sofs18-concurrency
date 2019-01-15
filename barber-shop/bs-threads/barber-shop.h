@@ -56,7 +56,7 @@ typedef struct _BarberShop_
    int numClientsInside;
    int clientsInside[MAX_CLIENTS];
    int greeting[2] = {0, 0}; 
-   void* service[2] = {0, NULL};
+   Service service;
 
    int opened;
 

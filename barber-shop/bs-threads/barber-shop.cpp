@@ -288,9 +288,9 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   while(*(int*)shop->service[0] != barberID)
+   while(&shop->service == NULL || shop->service.barberID != barberID)
       pthread_cond_wait(&serviceCD, &serviceCR);
-   Service res = *(Service *)shop->service[1];
+   Service res = shop->service;
 
    pthread_mutex_unlock(&serviceCR);
    
@@ -303,7 +303,14 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
+   pthread_mutex_lock(&serviceCR);
+
    require (shop != NULL, "shop argument required");
+   
+   shop->service = service;
+   pthread_cond_broadcast(&serviceCD);
+   
+   pthread_mutex_unlock(&serviceCR);
 
 }
 

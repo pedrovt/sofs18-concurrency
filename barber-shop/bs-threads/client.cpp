@@ -285,7 +285,7 @@ static void wait_all_services_done(Client* client)
    client->state = WAITING_SERVICE;
    log_client(client);
    Service service = wait_service_from_barber(client->shop, client->barberID);
-   
+
    client->state = WAITING_SERVICE_START;
    log_client(client);
 
