@@ -297,6 +297,8 @@ static void wait_all_services_done(Client* client)
       client->state = HAVING_A_HAIR_WASH;
    }
 
+   pthread_cond_signal(&sitCD);
+
 }
 
 

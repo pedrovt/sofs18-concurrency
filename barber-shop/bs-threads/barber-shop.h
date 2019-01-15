@@ -27,6 +27,7 @@ extern pthread_mutex_t serviceCR;
 extern pthread_cond_t serviceCD;
 extern pthread_cond_t riseChairCD;
 extern pthread_cond_t riseWashCD;
+extern pthread_cond_t sitCD;
 
 extern pthread_mutex_t toolCR;
 extern pthread_cond_t scissorCD;

@@ -23,6 +23,7 @@ pthread_mutex_t serviceCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t serviceCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t riseChairCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t riseWashCD = PTHREAD_COND_INITIALIZER;
+pthread_cond_t sitCD = PTHREAD_COND_INITIALIZER;
 
 pthread_mutex_t toolCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t scissorCD = PTHREAD_COND_INITIALIZER;
@@ -319,7 +320,7 @@ void inform_client_on_service(BarberShop* shop, Service service)
 
    require (shop != NULL, "shop argument required");
 
-   services.insert(std::pair<int, Service>(service.barberID, service));
+   services.insert(std::pair<int, Service>(service_barber_id(&service), service));
    pthread_cond_broadcast(&serviceCD);
 
    pthread_mutex_unlock(&serviceCR);
