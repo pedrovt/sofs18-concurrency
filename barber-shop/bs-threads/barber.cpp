@@ -134,8 +134,8 @@ static void life(Barber* barber)
    while(work_available(barber)) // no more possible clients and closes barbershop
    {
       rise_from_barber_bench(barber);
-      spend(10000000);
       process_resquests_from_client(barber);
+      spend(10000000);
       /* release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber); */
@@ -176,7 +176,7 @@ static void wait_for_client(Barber* barber)
    log_barber(barber);
 
    while(num_available_benches_seats(client_benches(barber->shop)) == barber->shop->numClientBenchesSeats)
-      pthread_cond_wait(&enter, &enterCR);
+      pthread_cond_wait(&enterCD, &enterCR);
 
    RQItem client = next_client_in_benches(client_benches(barber->shop));
    barber->clientID = client.clientID;
@@ -184,7 +184,7 @@ static void wait_for_client(Barber* barber)
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 
    receive_and_greet_client(barber->shop, barber->id, client.clientID);
-   pthread_cond_signal(&greet);
+   pthread_cond_broadcast(&greetCD);
 
    pthread_mutex_unlock(&enterCR);
 
@@ -216,6 +216,25 @@ static void rise_from_barber_bench(Barber* barber)
    log_barber(barber);
 }
 
+static void pickup_tool(ToolsPot* toolsPot, char* tool)
+{
+
+}
+
+static void pickup_tools(Barber* barber, int service) 
+{
+   pthread_mutex_lock(&toolCR);
+   
+   if(service == HAIRCUT_REQ) {
+      barber->state = REQ_SCISSOR;
+      log_barber(barber);
+      while(barber->shop->toolsPot.availScissors <= 0)
+         pthread_cond_wait(&scissorCD, &toolCR);
+   }
+
+   pthread_mutex_unlock(&toolCR);
+}
+
 static void process_resquests_from_client(Barber* barber)
 {
    /** TODO:
@@ -234,20 +253,52 @@ static void process_resquests_from_client(Barber* barber)
     * At the end the client must leave the barber shop
     **/
 
+   pthread_mutex_lock(&serviceCR);
 
    require (barber != NULL, "barber argument required");
 
    int services[3] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ};
    int states[3] = {WAITING_BARBER_SEAT, WAITING_WASHBASIN, WAITING_BARBER_SEAT};
-    
+   const char *type[3] = {"barber","wash","barber"};
+   
+   /* service->barberChair = 1;
+   service->washbasin = 0;
+   service->barberID = barber_id;
+   service->clientID = client_id;
+   service->pos = pos;
+   service->request = request; */
+   
+   // TODO ver qual e a melhor tarefa a realizar no momento, depenendo das tools existentes e dos lugares
+
    for(int i=0; i < 3; i++) {
-      if(barber->reqToDo != 0) {
+      if((barber->reqToDo & services[i]) != 0) {
+         Service service;
          barber->state = states[i];
          log_barber(barber);
+         if(strcmp(type[i], "barber") == 0) {
+            while(num_available_barber_chairs(barber->shop) <= 0)
+               pthread_cond_wait(&riseChairCD, &serviceCR);
+            int pos = reserve_random_empty_barber_chair(barber->shop, barber->id);
+            set_barber_chair_service(&service, barber->id, barber->clientID, pos, services[i]);
+         } else {
+            while(num_available_washbasin(barber->shop) <= 0)
+               pthread_cond_wait(&riseWashCD, &serviceCR);
+            int pos = reserve_random_empty_washbasin(barber->shop, barber->id);
+            set_washbasin_service(&service, barber->id, barber->clientID, pos);
+         }
+         
+         barber->shop->service[0] = (void *)&barber->id;
+         barber->shop->service[1] = (void *)&service;
+         pthread_cond_broadcast(&serviceCD);
+         //pickup_tools(&barber->shop->toolsPot, services[i]);
+
+         while(true)
+            pthread_cond_wait(&greetCD, &serviceCR);
       }
    }
 
-   log_barber(barber);  // (if necessary) more than one in proper places!!!
+   pthread_mutex_unlock(&serviceCR);
+
 }
 
 static void release_client(Barber* barber)

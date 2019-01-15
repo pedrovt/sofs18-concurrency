@@ -76,7 +76,7 @@ int num_columns_client()
 {
    return string_num_columns((char*)skel);
 }
-
+   
 void init_client(Client* client, int id, BarberShop* shop, int num_trips_to_barber, int line, int column)
 {
    require (client != NULL, "client argument required");
@@ -141,8 +141,8 @@ static void life(Client* client)
          select_requests(client);
          wait_its_turn(client);
          rise_from_client_benches(client);
-         spend(100000);
          wait_all_services_done(client);
+         spend(100000);
          i++;
       }
    }
@@ -260,7 +260,7 @@ static void rise_from_client_benches(Client* client)
 
    log_client(client);
 
-   pthread_cond_signal(&rise);
+   pthread_cond_signal(&riseCD);
 
    pthread_mutex_unlock(&enterCR);
 }
@@ -282,7 +282,21 @@ static void wait_all_services_done(Client* client)
 
    require (client != NULL, "client argument required");
 
-   log_client(client); // more than one in proper places!!!
+   client->state = WAITING_SERVICE;
+   log_client(client);
+   Service service = wait_service_from_barber(client->shop, client->barberID);
+   
+   client->state = WAITING_SERVICE_START;
+   log_client(client);
+
+   if(is_barber_chair_service(&service)) {
+      sit_in_barber_chair(&client->shop->barberChair[service_position(&service)], client->id);
+      client->state = service.request == SHAVE_REQ ? HAVING_A_SHAVE : HAVING_A_HAIRCUT;
+   } else {
+      sit_in_washbasin(&client->shop->washbasin[service_position(&service)], client->id);
+      client->state = HAVING_A_HAIR_WASH;
+   }
+
 }
 
 

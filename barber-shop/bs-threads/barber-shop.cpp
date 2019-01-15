@@ -9,11 +9,21 @@
 #include "barber-shop.h"
 
 pthread_mutex_t enterCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t enter = PTHREAD_COND_INITIALIZER;
-pthread_cond_t rise = PTHREAD_COND_INITIALIZER;
+pthread_cond_t enterCD = PTHREAD_COND_INITIALIZER;
+pthread_cond_t riseCD = PTHREAD_COND_INITIALIZER;
 
 pthread_mutex_t greetCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t greet = PTHREAD_COND_INITIALIZER;
+pthread_cond_t greetCD = PTHREAD_COND_INITIALIZER;
+
+pthread_mutex_t serviceCR = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t serviceCD = PTHREAD_COND_INITIALIZER;
+pthread_cond_t riseChairCD = PTHREAD_COND_INITIALIZER;
+pthread_cond_t riseWashCD = PTHREAD_COND_INITIALIZER;
+
+pthread_mutex_t toolCR = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t scissorCD = PTHREAD_COND_INITIALIZER;
+pthread_cond_t combCD = PTHREAD_COND_INITIALIZER;
+pthread_cond_t razorCD = PTHREAD_COND_INITIALIZER;
 
 /* TODO: take a careful look to all the non static (public) functions, to check
  * if a proper synchronization is needed.
@@ -273,10 +283,17 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
     * function called from a client, expecting to be informed of the next Service to be provided by a barber
     **/
 
+   pthread_mutex_lock(&serviceCR);
+
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   Service res;
+   while(*(int*)shop->service[0] != barberID)
+      pthread_cond_wait(&serviceCD, &serviceCR);
+   Service res = *(Service *)shop->service[1];
+
+   pthread_mutex_unlock(&serviceCR);
+   
    return res;
 }
 
@@ -310,7 +327,7 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    pthread_mutex_lock(&enterCR);
 
    while(num_available_benches_seats(client_benches(shop)) <= 0)
-      pthread_cond_wait(&rise, &enterCR);
+      pthread_cond_wait(&riseCD, &enterCR);
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
@@ -321,7 +338,7 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop->clientsInside[shop->numClientsInside++] = clientID;
 
-   pthread_cond_signal(&enter);
+   pthread_cond_signal(&enterCD);
 
    pthread_mutex_unlock(&enterCR);
    
@@ -362,7 +379,7 @@ void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    shop->greeting[0] = clientID;
    shop->greeting[1] = barberID;
-   
+
    pthread_mutex_unlock(&greetCR);
 
 }
@@ -378,7 +395,7 @@ int greet_barber(BarberShop* shop, int clientID)
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    while(shop->greeting[0] != clientID) 
-      pthread_cond_wait(&greet, &greetCR);
+      pthread_cond_wait(&greetCD, &greetCR);
 
    int barberID = shop->greeting[1];
    pthread_mutex_unlock(&greetCR);

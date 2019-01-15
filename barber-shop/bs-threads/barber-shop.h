@@ -15,11 +15,22 @@
 #include "service.h"
 #include "client-benches.h"
 
-extern pthread_mutex_t accessCR;
 extern pthread_mutex_t enterCR;
-extern pthread_cond_t enter;
-extern pthread_cond_t greet;
-extern pthread_cond_t rise;
+extern pthread_cond_t enterCD;
+extern pthread_cond_t riseCD;
+
+extern pthread_mutex_t greetCR;
+extern pthread_cond_t greetCD;
+
+extern pthread_mutex_t serviceCR;
+extern pthread_cond_t serviceCD;
+extern pthread_cond_t riseChairCD;
+extern pthread_cond_t riseWashCD;
+
+extern pthread_mutex_t toolCR;
+extern pthread_cond_t scissorCD;
+extern pthread_cond_t combCD;
+extern pthread_cond_t razorCD;
 
 typedef struct _BarberShop_
 {
@@ -45,6 +56,7 @@ typedef struct _BarberShop_
    int numClientsInside;
    int clientsInside[MAX_CLIENTS];
    int greeting[2] = {0, 0}; 
+   void* service[2] = {0, NULL};
 
    int opened;
 
