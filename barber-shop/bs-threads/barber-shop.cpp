@@ -30,6 +30,7 @@ pthread_cond_t combCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t razorCD = PTHREAD_COND_INITIALIZER;
 
 std::unordered_map<int, Service> services;
+std::unordered_map<int, int> greetings;
 
 /* TODO: take a careful look to all the non static (public) functions, to check
  * if a proper synchronization is needed.
@@ -301,6 +302,7 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    while(services.find(barberID) == services.end())
       pthread_cond_wait(&serviceCD, &serviceCR);
    Service res = services.at(barberID);
+   services.erase(barberID);
 
    pthread_mutex_unlock(&serviceCR);
    
@@ -318,7 +320,7 @@ void inform_client_on_service(BarberShop* shop, Service service)
    require (shop != NULL, "shop argument required");
 
    services.insert(std::pair<int, Service>(service.barberID, service));
-   pthread_cond_signal(&serviceCD);
+   pthread_cond_broadcast(&serviceCD);
 
    pthread_mutex_unlock(&serviceCR);
 
@@ -394,8 +396,8 @@ void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
-   shop->greeting[0] = clientID;
-   shop->greeting[1] = barberID;
+   greetings.insert(std::pair<int, int>(clientID, barberID));
+   pthread_cond_broadcast(&greetCD);
 
    pthread_mutex_unlock(&greetCR);
 
@@ -411,11 +413,13 @@ int greet_barber(BarberShop* shop, int clientID)
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   while(shop->greeting[0] != clientID) 
+   while(greetings.find(clientID) == greetings.end()) 
       pthread_cond_wait(&greetCD, &greetCR);
 
-   int barberID = shop->greeting[1];
+   int barberID = greetings.at(clientID);
+   greetings.erase(clientID);
    pthread_mutex_unlock(&greetCR);
+
    return barberID;
 
 }

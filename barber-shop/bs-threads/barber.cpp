@@ -180,14 +180,14 @@ static void wait_for_client(Barber* barber)
       pthread_cond_wait(&enterCD, &enterCR);
 
    RQItem client = next_client_in_benches(client_benches(barber->shop));
+   
+   pthread_mutex_unlock(&enterCR);
+
    barber->clientID = client.clientID;
    barber->reqToDo = client.request;
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 
    receive_and_greet_client(barber->shop, barber->id, client.clientID);
-   pthread_cond_broadcast(&greetCD);
-
-   pthread_mutex_unlock(&enterCR);
 
 }
 
@@ -217,23 +217,26 @@ static void rise_from_barber_bench(Barber* barber)
    log_barber(barber);
 }
 
-static void pickup_tool(ToolsPot* toolsPot, char* tool)
-{
-
-}
-
 static void pickup_tools(Barber* barber, int service) 
 {
-   pthread_mutex_lock(&toolCR);
    
+   pthread_mutex_lock(&toolCR);
+
    if(service == HAIRCUT_REQ) {
       barber->state = REQ_SCISSOR;
       log_barber(barber);
       while(barber->shop->toolsPot.availScissors <= 0)
          pthread_cond_wait(&scissorCD, &toolCR);
+      pick_scissor(&barber->shop->toolsPot);
+      barber->state = REQ_COMB;
+      log_barber(barber);
+      while(barber->shop->toolsPot.availCombs <= 0)
+         pthread_cond_wait(&combCD, &toolCR);
+      pick_comb(&barber->shop->toolsPot);
    }
 
    pthread_mutex_unlock(&toolCR);
+
 }
 
 static void process_resquests_from_client(Barber* barber)
@@ -260,6 +263,7 @@ static void process_resquests_from_client(Barber* barber)
 
    int services[3] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ};
    int states[3] = {WAITING_BARBER_SEAT, WAITING_WASHBASIN, WAITING_BARBER_SEAT};
+   int working_states[3] = {CUTTING, WASHING, SHAVING};
    const char *type[3] = {"barber","wash","barber"};
    
    /* service->barberChair = 1;
@@ -277,29 +281,33 @@ static void process_resquests_from_client(Barber* barber)
          barber->state = states[i];
          log_barber(barber);
          if(strcmp(type[i], "barber") == 0) {
+            barber->state = WAITING_BARBER_SEAT;
+            log_barber(barber);
             while(num_available_barber_chairs(barber->shop) <= 0)
                pthread_cond_wait(&riseChairCD, &processCR);
             int pos = reserve_random_empty_barber_chair(barber->shop, barber->id);
             set_barber_chair_service(&service, barber->id, barber->clientID, pos, services[i]);
          } else {
+            barber->state = WAITING_WASHBASIN;
+            log_barber(barber);
             while(num_available_washbasin(barber->shop) <= 0)
                pthread_cond_wait(&riseWashCD, &processCR);
             int pos = reserve_random_empty_washbasin(barber->shop, barber->id);
             set_washbasin_service(&service, barber->id, barber->clientID, pos);
          }
          
+         pthread_mutex_unlock(&processCR);
          inform_client_on_service(barber->shop, service);
-         barber->clientID = service.request;
-         log_barber(barber);
-         //pickup_tools(&barber->shop->toolsPot, services[i]);
+         pickup_tools(barber, services[i]);
 
-         // So para testes
+         barber->state = working_states[i];
+         log_barber(barber);
+
+         // Fica preso n primeiro request
          while(true)
             pthread_cond_wait(&greetCD, &processCR);
       }
    }
-
-   pthread_mutex_unlock(&processCR);
 
    /* while(barber->reqToDo == 0);
 

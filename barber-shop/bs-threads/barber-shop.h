@@ -56,7 +56,6 @@ typedef struct _BarberShop_
 
    int numClientsInside;
    int clientsInside[MAX_CLIENTS];
-   int greeting[2] = {0, 0}; 
 
    int opened;
 
