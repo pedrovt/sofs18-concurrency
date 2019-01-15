@@ -254,6 +254,8 @@ static void process_resquests_from_client(Barber* barber)
     * At the end the client must leave the barber shop
     **/
 
+   pthread_mutex_lock(&processCR);
+
    require (barber != NULL, "barber argument required");
 
    int services[3] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ};
@@ -276,17 +278,16 @@ static void process_resquests_from_client(Barber* barber)
          log_barber(barber);
          if(strcmp(type[i], "barber") == 0) {
             while(num_available_barber_chairs(barber->shop) <= 0)
-               pthread_cond_wait(&riseChairCD, &serviceCR);
+               pthread_cond_wait(&riseChairCD, &processCR);
             int pos = reserve_random_empty_barber_chair(barber->shop, barber->id);
             set_barber_chair_service(&service, barber->id, barber->clientID, pos, services[i]);
          } else {
             while(num_available_washbasin(barber->shop) <= 0)
-               pthread_cond_wait(&riseWashCD, &serviceCR);
+               pthread_cond_wait(&riseWashCD, &processCR);
             int pos = reserve_random_empty_washbasin(barber->shop, barber->id);
             set_washbasin_service(&service, barber->id, barber->clientID, pos);
          }
          
-         spend(100);
          inform_client_on_service(barber->shop, service);
          barber->clientID = service.request;
          log_barber(barber);
@@ -294,9 +295,11 @@ static void process_resquests_from_client(Barber* barber)
 
          // So para testes
          while(true)
-            pthread_cond_wait(&greetCD, &serviceCR);
+            pthread_cond_wait(&greetCD, &processCR);
       }
    }
+
+   pthread_mutex_unlock(&processCR);
 
    /* while(barber->reqToDo == 0);
 

@@ -8,6 +8,9 @@
 #include "global.h"
 #include "barber-shop.h"
 
+#include <iostream>
+#include <unordered_map>
+
 pthread_mutex_t enterCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t enterCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t riseCD = PTHREAD_COND_INITIALIZER;
@@ -15,6 +18,7 @@ pthread_cond_t riseCD = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t greetCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t greetCD = PTHREAD_COND_INITIALIZER;
 
+pthread_mutex_t processCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t serviceCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t serviceCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t riseChairCD = PTHREAD_COND_INITIALIZER;
@@ -24,6 +28,8 @@ pthread_mutex_t toolCR = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t scissorCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t combCD = PTHREAD_COND_INITIALIZER;
 pthread_cond_t razorCD = PTHREAD_COND_INITIALIZER;
+
+std::unordered_map<int, Service> services;
 
 /* TODO: take a careful look to all the non static (public) functions, to check
  * if a proper synchronization is needed.
@@ -288,9 +294,13 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   while(&shop->service == NULL || shop->service.barberID != barberID)
+   /* while(&shop->service == NULL || shop->service.barberID != barberID)
       pthread_cond_wait(&serviceCD, &serviceCR);
-   Service res = shop->service;
+   Service res = shop->service; */
+
+   while(services.find(barberID) == services.end())
+      pthread_cond_wait(&serviceCD, &serviceCR);
+   Service res = services.at(barberID);
 
    pthread_mutex_unlock(&serviceCR);
    
@@ -306,10 +316,10 @@ void inform_client_on_service(BarberShop* shop, Service service)
    pthread_mutex_lock(&serviceCR);
 
    require (shop != NULL, "shop argument required");
-   
-   shop->service = service;
-   pthread_cond_broadcast(&serviceCD);
-   
+
+   services.insert(std::pair<int, Service>(service.barberID, service));
+   pthread_cond_signal(&serviceCD);
+
    pthread_mutex_unlock(&serviceCR);
 
 }
