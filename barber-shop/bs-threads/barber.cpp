@@ -136,8 +136,8 @@ static void life(Barber* barber)
    while(work_available(barber)) // no more possible clients and closes barbershop
    {
       rise_from_barber_bench(barber);
-      spend(10000000);
       process_resquests_from_client(barber);
+      spend(10000000);
       /* release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber); */
@@ -287,12 +287,11 @@ static void process_resquests_from_client(Barber* barber)
     **/
 
    // Zona critica, varios barbeiros a chamar reserve
-   pthread_mutex_lock(&processCR);
 
    require (barber != NULL, "barber argument required");
 
-   int services[3] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ};
-   int states[3] = {WAITING_BARBER_SEAT, WAITING_WASHBASIN, WAITING_BARBER_SEAT};
+   int services[3] = {WASH_HAIR_REQ, HAIRCUT_REQ, SHAVE_REQ};
+   int states[3] = {WAITING_WASHBASIN, WAITING_BARBER_SEAT, WAITING_BARBER_SEAT};
    
    // TODO ver qual e a melhor tarefa a realizar no momento, depenendo das tools existentes e dos lugares
 
@@ -306,35 +305,36 @@ static void process_resquests_from_client(Barber* barber)
          if(services[i] == HAIRCUT_REQ || services[i] == SHAVE_REQ) {
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber);
+            pthread_mutex_lock(&barber->shop->barber_chairCR);
             while(num_available_barber_chairs(barber->shop) <= 0)
-               pthread_cond_wait(&riseChairCD, &processCR);
+               pthread_cond_wait(&barber->shop->rise_barber_chairCD, &barber->shop->barber_chairCR);
             pos = reserve_random_empty_barber_chair(barber->shop, barber->id);
+            pthread_mutex_unlock(&barber->shop->barber_chairCR);
             barber->chairPosition = pos;
             set_barber_chair_service(&service, barber->id, barber->clientID, pos, services[i]);
          } else {
             barber->state = WAITING_WASHBASIN;
             log_barber(barber);
+            pthread_mutex_lock(&barber->shop->washbasinCR);
             while(num_available_washbasin(barber->shop) <= 0)
-               pthread_cond_wait(&riseWashCD, &processCR);
+               pthread_cond_wait(&barber->shop->rise_washbasinCD, &barber->shop->washbasinCR);
             pos = reserve_random_empty_washbasin(barber->shop, barber->id);
+            pthread_mutex_unlock(&barber->shop->washbasinCR);
             barber->basinPosition = pos;
             set_washbasin_service(&service, barber->id, barber->clientID, pos);
          }
          
-         // Sair de zona critica, informar os clientes, e apanhar as ferramentas especificas
-         pthread_mutex_unlock(&processCR);
+         //Informar os clientes, e apanhar as ferramentas especificas
          inform_client_on_service(barber->shop, service);
          pickup_tools(barber, services[i]);
 
          // Se for um servico na cadeira de barbeiro defenir as ferramentas na mesma
          // Para ambos os casos espera ate o cliente estar no sitio
          if(is_barber_chair_service(&service)) {
+            while(!complete_barber_chair(&barber->shop->barberChair[barber->chairPosition]));       
             set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-            while(!complete_barber_chair(&barber->shop->barberChair[barber->chairPosition]))
-               pthread_cond_wait(&sitCD, &processCR);
          } else 
-            while(!complete_washbasin(&barber->shop->washbasin[barber->basinPosition]))
-                  pthread_cond_wait(&sitCD, &processCR);
+            while(!complete_washbasin(&barber->shop->washbasin[barber->basinPosition]));
 
          // Inicia o processo correspondente
          if(services[i] == HAIRCUT_REQ)

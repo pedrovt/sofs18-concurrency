@@ -55,7 +55,7 @@ static void notify_client_birth(Client* client);
 static void notify_client_death(Client* client);
 static void wandering_outside(Client* client);
 static int vacancy_in_barber_shop(Client* client);
-static void select_requests(Client* client);
+static int select_requests(Client* client);
 static void wait_its_turn(Client* client);
 static void rise_from_client_benches(Client* client);
 static void wait_all_services_done(Client* client);
@@ -138,14 +138,19 @@ static void life(Client* client)
       wandering_outside(client);
       if (vacancy_in_barber_shop(client))
       {
-         select_requests(client);
-         wait_its_turn(client);
-         rise_from_client_benches(client);
-         wait_all_services_done(client);
-         spend(100000);
+         // Pequena alteracao, so entra na loja se escolheu algum pedido
+         // Visto que á percentagem para cada request, pode nao escolher nada
+         if(select_requests(client) != 0) {
+            wait_its_turn(client);
+            rise_from_client_benches(client);
+            wait_all_services_done(client);
+            spend(100000);
+         }
          i++;
       }
    }
+   client->state = DONE;
+   log_client(client);
    notify_client_death(client);
 }
 
@@ -210,7 +215,7 @@ static int vacancy_in_barber_shop(Client* client)
    return res;
 }
 
-static void select_requests(Client* client)
+static int select_requests(Client* client)
 {
    /** TODO:
     * 1: set the client state to SELECTING_REQUESTS
@@ -220,8 +225,16 @@ static void select_requests(Client* client)
    require (client != NULL, "client argument required");
 
    client->state = SELECTING_REQUESTS;
-   int combinations[7] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ, HAIRCUT_REQ | WASH_HAIR_REQ, HAIRCUT_REQ | SHAVE_REQ, WASH_HAIR_REQ | SHAVE_REQ, HAIRCUT_REQ | WASH_HAIR_REQ | SHAVE_REQ};
-   client->requests = combinations[rand() % 7];
+
+   int reqs[3] = {HAIRCUT_REQ, WASH_HAIR_REQ, SHAVE_REQ};
+   int probs[3] = {global->PROB_REQUEST_HAIRCUT, global->PROB_REQUEST_WASHHAIR, global->PROB_REQUEST_SHAVE};
+
+   for(int i = 0; i < 3; i++)
+      if(random_int(1, 100) <= probs[i])
+         client->requests = client->requests | reqs[i];
+
+   return client->requests;
+
    log_client(client);
 }
 
@@ -297,7 +310,7 @@ static void wait_all_services_done(Client* client)
       client->state = HAVING_A_HAIR_WASH;
    }
 
-   pthread_cond_signal(&sitCD);
+   //pthread_cond_broadcast(&sitCD);
 
 }
 

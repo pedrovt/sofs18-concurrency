@@ -291,7 +291,7 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
     * function called from a client, expecting to be informed of the next Service to be provided by a barber
     **/
 
-   pthread_mutex_lock(&serviceCR);
+   pthread_mutex_lock(&shop->serviceCR);
 
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
@@ -301,11 +301,11 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    Service res = shop->service; */
 
    while(services.find(barberID) == services.end())
-      pthread_cond_wait(&serviceCD, &serviceCR);
+      pthread_cond_wait(&shop->serviceCD, &shop->serviceCR);
    Service res = services.at(barberID);
    services.erase(barberID);
 
-   pthread_mutex_unlock(&serviceCR);
+   pthread_mutex_unlock(&shop->serviceCR);
    
    return res;
 }
@@ -316,14 +316,14 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   pthread_mutex_lock(&serviceCR);
+   pthread_mutex_lock(&shop->serviceCR);
 
    require (shop != NULL, "shop argument required");
 
    services.insert(std::pair<int, Service>(service_barber_id(&service), service));
-   pthread_cond_broadcast(&serviceCD);
+   pthread_cond_broadcast(&shop->serviceCD);
 
-   pthread_mutex_unlock(&serviceCR);
+   pthread_mutex_unlock(&shop->serviceCR);
 
 }
 
@@ -373,9 +373,13 @@ void leave_barber_shop(BarberShop* shop, int clientID)
     * Function called from a client when leaving the barbershop
     **/
 
+   // Zona critica nao relacionada com os cliente_benches mas sim com o clientsInside
+   // Que se encontra dentro do lock dos cliente_benches no enter_barber, dai o uso do mesmo
+   pthread_mutex_lock(&shop->client_benchCR);
+
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
-   require (is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
+   require (is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " not in store"));
 
    int i;
    for(i = 0; shop->clientsInside[i] != clientID; i++)
@@ -384,6 +388,9 @@ void leave_barber_shop(BarberShop* shop, int clientID)
    check (shop->clientsInside[i] == clientID, "");
    for(; i < shop->numClientsInside; i++)
       shop->clientsInside[i] = shop->clientsInside[i+1];
+
+   pthread_mutex_unlock(&shop->client_benchCR);
+
 }
 
 void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)

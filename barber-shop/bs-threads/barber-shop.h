@@ -69,8 +69,19 @@ typedef struct _BarberShop_
    pthread_cond_t rise_client_benchCD = PTHREAD_COND_INITIALIZER; 
    pthread_cond_t sit_client_benchCD = PTHREAD_COND_INITIALIZER; 
 
-   pthread_mutex_t greetCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras dos clientes 
+   pthread_mutex_t greetCR = PTHREAD_MUTEX_INITIALIZER; // Para alterar e aceder ao mapa de greetings 
    pthread_cond_t greetCD = PTHREAD_COND_INITIALIZER; 
+
+   pthread_mutex_t serviceCR = PTHREAD_MUTEX_INITIALIZER; // Para alterar e aceder ao mapa de servicos
+   pthread_cond_t serviceCD = PTHREAD_COND_INITIALIZER; 
+
+   pthread_mutex_t barber_chairCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras de barbeiro
+   pthread_cond_t rise_barber_chairCD = PTHREAD_COND_INITIALIZER; 
+   pthread_cond_t sit_barber_chairCD = PTHREAD_COND_INITIALIZER; 
+
+   pthread_mutex_t washbasinCR = PTHREAD_MUTEX_INITIALIZER; // Para os lavabos
+   pthread_cond_t rise_washbasinCD = PTHREAD_COND_INITIALIZER; 
+   pthread_cond_t sit_washbasinCD = PTHREAD_COND_INITIALIZER; 
 
 } BarberShop;
 
