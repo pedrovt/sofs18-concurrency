@@ -194,7 +194,7 @@ static int vacancy_in_barber_shop(Client* client)
     **/
 
    // Zona critica, ver se existe lugares enquanto alguem se senta
-   pthread_mutex_lock(&enterCR); 
+   pthread_mutex_lock(&client->shop->client_benchCR); 
 
    require (client != NULL, "client argument required");
    client->state = WAITING_BARBERSHOP_VACANCY;
@@ -205,7 +205,7 @@ static int vacancy_in_barber_shop(Client* client)
 
    log_client(client);
 
-   pthread_mutex_unlock(&enterCR);
+   pthread_mutex_unlock(&client->shop->client_benchCR);
    
    return res;
 }
@@ -250,7 +250,7 @@ static void rise_from_client_benches(Client* client)
     * 1: (exactly what the name says)
     **/
 
-   pthread_mutex_lock(&enterCR);
+   pthread_mutex_lock(&client->shop->client_benchCR);
 
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
@@ -260,9 +260,9 @@ static void rise_from_client_benches(Client* client)
 
    log_client(client);
 
-   pthread_cond_signal(&riseCD);
+   pthread_cond_signal(&client->shop->rise_client_benchCD);
 
-   pthread_mutex_unlock(&enterCR);
+   pthread_mutex_unlock(&client->shop->client_benchCR);
 }
 
 static void wait_all_services_done(Client* client)

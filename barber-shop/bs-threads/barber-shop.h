@@ -62,6 +62,16 @@ typedef struct _BarberShop_
 
    int logId;
    char* internal;
+
+   pthread_mutex_t barber_benchCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras dos barbeiros
+
+   pthread_mutex_t client_benchCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras dos clientes 
+   pthread_cond_t rise_client_benchCD = PTHREAD_COND_INITIALIZER; 
+   pthread_cond_t sit_client_benchCD = PTHREAD_COND_INITIALIZER; 
+
+   pthread_mutex_t greetCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras dos clientes 
+   pthread_cond_t greetCD = PTHREAD_COND_INITIALIZER; 
+
 } BarberShop;
 
 int num_lines_barber_shop(BarberShop* shop);

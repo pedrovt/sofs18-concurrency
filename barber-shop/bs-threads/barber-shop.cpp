@@ -344,10 +344,11 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
     * Function called from a client when entering the barbershop
     **/
 
-   pthread_mutex_lock(&enterCR);
+   // Zona critica, varios clientes a sentarem-se ao mesmo tempo, ou a sentarem-se e a ver lugar disponivel
+   pthread_mutex_lock(&shop->client_benchCR);
 
    while(num_available_benches_seats(client_benches(shop)) <= 0)
-      pthread_cond_wait(&riseCD, &enterCR);
+      pthread_cond_wait(&shop->rise_client_benchCD, &shop->client_benchCR);
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
@@ -358,9 +359,9 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop->clientsInside[shop->numClientsInside++] = clientID;
 
-   pthread_cond_signal(&enterCD);
+   pthread_cond_signal(&shop->sit_client_benchCD);
 
-   pthread_mutex_unlock(&enterCR);
+   pthread_mutex_unlock(&shop->client_benchCR);
    
    return res;
 
@@ -392,15 +393,15 @@ void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
     * it must send the barber ID to the client
     **/
 
-   pthread_mutex_lock(&greetCR);
+   pthread_mutex_lock(&shop->greetCR);
 
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    greetings.insert(std::pair<int, int>(clientID, barberID));
-   pthread_cond_broadcast(&greetCD);
+   pthread_cond_broadcast(&shop->greetCD);
 
-   pthread_mutex_unlock(&greetCR);
+   pthread_mutex_unlock(&shop->greetCR);
 
 }
 int greet_barber(BarberShop* shop, int clientID)
@@ -409,17 +410,17 @@ int greet_barber(BarberShop* shop, int clientID)
     * function called from a client, expecting to receive its barber's ID
     **/
 
-   pthread_mutex_lock(&greetCR);
+   pthread_mutex_lock(&shop->greetCR);
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    while(greetings.find(clientID) == greetings.end()) 
-      pthread_cond_wait(&greetCD, &greetCR);
+      pthread_cond_wait(&shop->greetCD, &shop->greetCR);
 
    int barberID = greetings.at(clientID);
    greetings.erase(clientID);
-   pthread_mutex_unlock(&greetCR);
+   pthread_mutex_unlock(&shop->greetCR);
 
    return barberID;
 

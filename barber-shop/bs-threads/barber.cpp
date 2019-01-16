@@ -136,8 +136,8 @@ static void life(Barber* barber)
    while(work_available(barber)) // no more possible clients and closes barbershop
    {
       rise_from_barber_bench(barber);
-      process_resquests_from_client(barber);
       spend(10000000);
+      process_resquests_from_client(barber);
       /* release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber); */
@@ -151,6 +151,10 @@ static void sit_in_barber_bench(Barber* barber)
     * 1: sit in a random empty seat in barber bench (always available)
     **/
 
+   // Zona critica, dois barbeiros a quererem sentar-se no mesmo banco
+   
+   pthread_mutex_lock(&barber->shop->barber_benchCR);
+
    require (barber != NULL, "barber argument required");
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
    require (!seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber already seated in barber shop");
@@ -158,6 +162,9 @@ static void sit_in_barber_bench(Barber* barber)
    barber->benchPosition = random_sit_in_barber_bench(barber_bench(barber->shop), barber->id);
 
    log_barber(barber);
+   
+   pthread_mutex_unlock(&barber->shop->barber_benchCR);
+
 }
 
 static void wait_for_client(Barber* barber)
@@ -169,20 +176,21 @@ static void wait_for_client(Barber* barber)
     **/
 
    // Zona critica, dois barbeiros a aceder a fila de clientes ao mesmo tempo
-   pthread_mutex_lock(&enterCR);
+   pthread_mutex_lock(&barber->shop->client_benchCR);
 
    require (barber != NULL, "barber argument required");
 
    barber->state = WAITING_CLIENTS;
-   //log to see that barber is waiting. in case we have to wait for someone to come in
    log_barber(barber);
 
-   while(num_available_benches_seats(client_benches(barber->shop)) == barber->shop->numClientBenchesSeats)
-      pthread_cond_wait(&enterCD, &enterCR);
+   // Verificar se a lista esta vazia e mais seguro, visto que verificar se todos os lugares estao vazios
+   // Depende que o cliente ja tenha chamado a funcao rise, o que causava que alguns barbeiros ficassem presos neste while
+   while(empty_client_queue(&barber->shop->clientBenches.queue))
+      pthread_cond_wait(&barber->shop->sit_client_benchCD, &barber->shop->client_benchCR);
 
    RQItem client = next_client_in_benches(client_benches(barber->shop));
-   
-   pthread_mutex_unlock(&enterCR);
+
+   pthread_mutex_unlock(&barber->shop->client_benchCR);
 
    barber->clientID = client.clientID;
    barber->reqToDo = client.request;
