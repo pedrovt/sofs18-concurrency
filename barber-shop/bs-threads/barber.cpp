@@ -278,6 +278,7 @@ static void process_resquests_from_client(Barber* barber)
     * At the end the client must leave the barber shop
     **/
 
+   // Zona critica, varios barbeiros a chamar reserve
    pthread_mutex_lock(&processCR);
 
    require (barber != NULL, "barber argument required");
@@ -293,6 +294,7 @@ static void process_resquests_from_client(Barber* barber)
          int pos;
          barber->state = states[i];
          log_barber(barber);
+         // Calcular a posicao duma cadeira random, e defenir o servico especifico em cada uma delas
          if(services[i] == HAIRCUT_REQ || services[i] == SHAVE_REQ) {
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber);
@@ -311,10 +313,13 @@ static void process_resquests_from_client(Barber* barber)
             set_washbasin_service(&service, barber->id, barber->clientID, pos);
          }
          
+         // Sair de zona critica, informar os clientes, e apanhar as ferramentas especificas
          pthread_mutex_unlock(&processCR);
          inform_client_on_service(barber->shop, service);
          pickup_tools(barber, services[i]);
 
+         // Se for um servico na cadeira de barbeiro defenir as ferramentas na mesma
+         // Para ambos os casos espera ate o cliente estar no sitio
          if(is_barber_chair_service(&service)) {
             set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
             while(!complete_barber_chair(&barber->shop->barberChair[barber->chairPosition]))
@@ -323,6 +328,7 @@ static void process_resquests_from_client(Barber* barber)
             while(!complete_washbasin(&barber->shop->washbasin[barber->basinPosition]))
                   pthread_cond_wait(&sitCD, &processCR);
 
+         // Inicia o processo correspondente
          if(services[i] == HAIRCUT_REQ)
             process_haircut_request(barber);
          else if(services[i] == WASH_HAIR_REQ)
@@ -330,7 +336,7 @@ static void process_resquests_from_client(Barber* barber)
          else
             process_shave_request(barber);
 
-         // Fica preso n primeiro request
+         // Para parar apos o request servico estar completo
          while(true)
             pthread_cond_wait(&greetCD, &processCR);
       }
