@@ -26,7 +26,6 @@ static Barber* allBarbers = NULL;
 static Client* allClients = NULL;
 static int logIdBarbersDesc;
 static int logIdClientsDesc;
-
 /* internal functions */
 static void help(char* prog, Parameters *params);
 static void processArgs(Parameters *params, int argc, char* argv[]);
@@ -76,7 +75,7 @@ static void go()
 
    require (allBarbers != NULL, "list of barbers data structures not created");
    require (allClients != NULL, "list of clients data structures not created");
-
+   printf("HELLO %d", global->NUM_BARBERS);
    launch_logger();
    char* descText;
    descText = (char*)"Barbers:";
@@ -84,11 +83,65 @@ static void go()
    descText = (char*)"Clients:";
    send_log(logIdClientsDesc, (char*)descText);
    show_barber_shop(shop);
-   for(int i = 0; i < global->NUM_BARBERS; i++)
-      log_barber(allBarbers+i);
-   for(int i = 0; i < global->NUM_CLIENTS; i++)
-      log_client(allClients+i);
 
+   pid_t allBarbersIds[global->NUM_BARBERS];
+   pid_t allClientsIds[global->NUM_CLIENTS];
+
+   for(int i = 0; i < global->NUM_BARBERS; i++) 
+   {      
+      // Launch Barbers
+      // Routine to run is main_barber()
+     
+      Barber* barber = &allBarbers[i];
+      check(barber != NULL, "barber to associate with process can't be null");
+      pid_t id = pfork();
+      allBarbersIds[i] = id;
+
+      // Child side: run Routine
+      if (id == 0) {              // 0 is parent, < 1 is already solved by the wrapper
+         main_barber(barber);
+      }
+      
+      log_barber(allBarbers+i);
+   }
+
+   for(int i = 0; i < global->NUM_CLIENTS; i++) 
+   {
+      // Launch Clients
+      // Routine to run is main_client()
+      //! Just 1 process for all clients?
+
+      Client* client = &allClients[i];
+      check(client != NULL, "client to associate with process can't be null");
+      
+      pid_t id = pfork();
+      allClientsIds[i] = id;
+      // Child side: run Routine
+      if (id == 0) { // 0 is parent, < 1 is already solved by the wrapper
+         main_client(client);
+      }
+
+      log_client(allClients + i);
+   }
+
+   // finish
+   // TODO move this code to static void finish()
+   int allBarbersStatus[global->NUM_BARBERS];
+   int allClientsStatus[global->NUM_CLIENTS];
+
+   printf("Waiting for barber processes to return\n");
+   for (int i = 0; i < global->NUM_BARBERS; i++) 
+   {
+      pwaitpid(allBarbersIds[i], &allBarbersStatus[i], 0);
+      printf("Process %d returned\n", allBarbersIds[i]);
+   }
+
+   printf("Waiting for clients processes to return\n");
+   for (int i = 0; i < global->NUM_CLIENTS; i++)
+   {
+      pwaitpid(allClientsIds[i], &allClientsStatus[i], 0);
+      printf("Process %d returned\n", allClientsIds[i]);
+   }
 }
 
 /**
@@ -97,7 +150,8 @@ static void go()
 static void finish()
 {
    /* TODO: change this function to your needs */
-
+   /* wait for processes to conclude */
+   
    term_logger();
 }
 
