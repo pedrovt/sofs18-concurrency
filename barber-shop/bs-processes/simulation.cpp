@@ -105,7 +105,7 @@ static void go()
       log_barber(allBarbers+i);
    }
    
-# define CLIENT_TEST false
+# define CLIENT_TEST true
 # if CLIENT_TEST
    for(int i = 0; i < global->NUM_CLIENTS; i++) 
    {

@@ -222,9 +222,23 @@ static void select_requests(Client* client)
    client -> state = SELECTING_REQUESTS;
 
    // Requests are a value from 1 to 7 (3 bits <=> 3 services)
-   // TODO reimplement using given probabilities [PEDRO TOMORROW]
-   client -> requests = random_int(1, 7);
+   // TODO refactor
+   
+   if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
+   {
+      client -> requests = client -> requests | HAIRCUT_REQ;
+   }
+   if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
+   {
+      client -> requests = client -> requests | WASH_HAIR_REQ;
+   }
+   if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
+   {
+      client -> requests = client -> requests | SHAVE_REQ;
+   }
 
+   check (((client -> requests )>= 1 && (client -> requests) <= 7), "invalid client requests");
+   
    log_client(client);
 }
 
