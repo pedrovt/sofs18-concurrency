@@ -147,7 +147,6 @@ static void life(Client* client)
    notify_client_death(client);
 }
 
-// TODO
 static void notify_client_birth(Client* client)
 {
    require (client != NULL, "client argument required");
@@ -155,11 +154,11 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
-
+   
+   //enter_barber_shop(client -> shop, client -> id, client -> requests);
    log_client(client);
 }
 
-// TODO 
 static void notify_client_death(Client* client)
 {
    /** TODO:
@@ -168,6 +167,7 @@ static void notify_client_death(Client* client)
 
    require (client != NULL, "client argument required");
 
+   leave_barber_shop(client -> shop, client -> id);
    log_client(client);
 }
 
@@ -299,8 +299,26 @@ static void wait_all_services_done(Client* client)
     **/
 
    require (client != NULL, "client argument required");
+   
+   // TODO for
+   //for () {
+      client -> state = WAITING_SERVICE;
+      Service service = wait_service_from_barber(client -> shop, client -> barberID);
+      
+      client -> state = WAITING_SERVICE_START;
 
-   // TODO [PEDRO TOMORROW]
+      // define destination
+      if (is_washbasin_service(&service)) {     // washbasin (hair wash)
+         sit_in_washbasin(&(client -> shop -> washbasin[service_position(&service)]), client -> id);
+         client -> state = HAVING_A_HAIR_WASH;
+      }
+      else {                                    // chair (haircut, chair)
+         sit_in_barber_chair(&(client -> shop -> barberChair[service_position(&service)]), client->id);
+         client->state = service.request == HAIRCUT_REQ ? HAVING_A_HAIRCUT : HAVING_A_SHAVE;
+      }
+   //}
+
+   leave_barber_shop(client -> shop, client -> id);
    log_client(client); // more than one in proper places!!!
 }
 

@@ -136,9 +136,9 @@ static void life(Barber* barber)
       rise_from_barber_bench(barber);
       process_resquests_from_client(barber);
       // TODO uncomment for next milestone
-      /* release_client(barber);
+      release_client(barber);
       sit_in_barber_bench(barber);
-      wait_for_client(barber); */
+      wait_for_client(barber); 
    }
    done(barber);
 }
@@ -157,9 +157,12 @@ static void sit_in_barber_bench(Barber* barber)
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
    require (!seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber already seated in barber shop");
 
-   log_barber(barber);
+   barber -> benchPosition = random_sit_in_barber_bench(barber_bench(barber -> shop), barber -> id);
 
+   ensure ((barber -> benchPosition) >= 0, "invalid barber bench position");
+   
    // TODO semaphore to unlock
+   log_barber(barber);
 }
 
 static void wait_for_client(Barber* barber)
@@ -175,11 +178,21 @@ static void wait_for_client(Barber* barber)
    // TODO semaphore to lock
    require (barber != NULL, "barber argument required");
 
-   log_barber(barber);  // (if necessary) more than one in proper places!!!
+   barber -> state = WAITING_CLIENTS;
+   while (no_more_clients(client_benches(barber -> shop))) {
+      // wait
+   }
+
+   RQItem client = next_client_in_benches(client_benches(barber -> shop));
+   receive_and_greet_client(barber -> shop, barber -> id, client.clientID);
+
+   //receive_and_greet_client
+   log_barber(barber); // (if necessary) more than one in proper places!!!
+   
    // TODO semaphore to lock
 }
 
-// TODO Milestone 1/2
+// TODO
 static int work_available(Barber* barber)
 {
    /** TODO:
@@ -230,7 +243,101 @@ static void process_resquests_from_client(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   //! Critical zone, several barbers reserving
+
+   //? ANY SIMPLER WAY TO OBTAIN THIS INFO?
+   int requests[3] = {HAIRCUT_REQ, SHAVE_REQ, WASH_HAIR_REQ};
+   
+   // for each request
+   for (int i = 0; i < 3; i++) 
+   {
+      int request = requests[i];
+
+          // if it's actually a request from the client
+      if ((barber->reqToDo & request) != 0)
+      {
+         Service service;
+
+         // Wash Request -> Reserve the basin
+         if (request == WASH_HAIR_REQ)
+         {
+            // set the client state??? shouldn't be barber?
+            barber -> state = WAITING_WASHBASIN;
+            log_barber(barber); //confirm if it's the best place 
+
+            // TODO lock with semaphore
+            while (num_available_washbasin(barber -> shop) <= 0) {
+               // TODO wait if there's no available washbasins
+            }
+            int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
+            // TODO unlock semaphore
+
+            barber->basinPosition = basinPosition;
+            set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
+         }
+
+         // Not Wash Request -> Reserve the chair 
+         else {
+            barber->state = WAITING_BARBER_SEAT;
+            log_barber(barber); //confirm if it's the best place
+
+            // TODO lock with semaphore
+            while (num_available_barber_chairs(barber->shop) <= 0)
+            {
+               // TODO wait if there's no available barber chairs
+            }
+            int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
+            // TODO unlock semaphore
+
+            barber -> chairPosition = chairPosition;
+            set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
+         }
+
+         // inform client on the service to be performed
+         inform_client_on_service(barber->shop, service);
+
+         // grab the necessary tools from the pot
+         // (if needed)
+         if (request == SHAVE_REQ)           // shave requires a razor
+         {
+            // todo
+            //maybe a function doing the following
+            // !CRITICAL ZONE: several barbers trying to pick up a tool
+            // lock
+            //barber -> state = REQ_X;
+            //while (no_available_X) wait
+            //pick_X() [given function]
+            //update barber -> tools 
+            // unlock
+         }
+         else if (request == HAIRCUT_REQ)    // haircut requires scissor & comb
+         {
+            // same function for SCISSOR and COMB
+         }
+
+         // todo wait until client is in place
+         // todo set tools @ barber chair, if needed
+
+         // todo process the service
+         if (request == WASH_HAIR_REQ)
+            break;
+            //process_hairwash_request(barber);
+         /*else if (request == SHAVE_REQ)
+            process_shave_request(barber);
+         else if (request == HAIRCUT_REQ)
+            process_haircut_request(barber);
+         */
+
+         // todo return the used tools to the pot (if any)
+      }
+   }
+   
+   
+   client_done(barber -> shop, barber -> clientID);
+
    log_barber(barber);  // (if necessary) more than one in proper places!!!
+
+   ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
 static void release_client(Barber* barber)
@@ -255,9 +362,7 @@ static void done(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
 
-   // notify a client that all its services are done
-   // function from barber-shop module
-   client_done(barber->shop, barber->clientID);
+   barber -> state = DONE;
    
    log_barber(barber);
 }

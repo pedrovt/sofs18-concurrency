@@ -332,6 +332,7 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
+// TODO
 void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
 {
    /** TODO:
