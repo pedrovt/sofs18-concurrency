@@ -135,9 +135,10 @@ static void life(Barber* barber)
    {
       rise_from_barber_bench(barber);
       process_resquests_from_client(barber);
-      release_client(barber);
+      // TODO uncomment for next milestone
+      /* release_client(barber);
       sit_in_barber_bench(barber);
-      wait_for_client(barber);
+      wait_for_client(barber); */
    }
    done(barber);
 }
@@ -148,11 +149,17 @@ static void sit_in_barber_bench(Barber* barber)
     * 1: sit in a random empty seat in barber bench (always available)
     **/
 
+   // !Critical zone: 2 barbers trying to seat in the same bench
+
+   // TODO semaphore to lock
+   
    require (barber != NULL, "barber argument required");
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
    require (!seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber already seated in barber shop");
 
    log_barber(barber);
+
+   // TODO semaphore to unlock
 }
 
 static void wait_for_client(Barber* barber)
@@ -162,12 +169,17 @@ static void wait_for_client(Barber* barber)
     * 2: get next client from client benches (if empty, wait) (also, it may be required to check for simulation termination)
     * 3: receive and greet client (receive its requested services, and give back the barber's id)
     **/
+   
+   // !Critical zone: 2 barbers trying to access the clients queue
 
+   // TODO semaphore to lock
    require (barber != NULL, "barber argument required");
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
+   // TODO semaphore to lock
 }
 
+// TODO Milestone 1/2
 static int work_available(Barber* barber)
 {
    /** TODO:
@@ -185,12 +197,18 @@ static void rise_from_barber_bench(Barber* barber)
     * 1: rise from the seat of barber bench
     **/
 
+   // TODO critical zone? I don't think so, but confirm
+
    require (barber != NULL, "barber argument required");
    require (seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber not seated in barber shop");
+
+   rise_barber_bench(barber_bench(barber->shop), barber->benchPosition);
+   barber->benchPosition = -1; // Invalid position, ie not in the bench
 
    log_barber(barber);
 }
 
+// TODO Milestone 1/2
 static void process_resquests_from_client(Barber* barber)
 {
    /** TODO:
@@ -223,6 +241,10 @@ static void release_client(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   // notify a client that all its services are done
+   // function from barber-shop module
+   client_done(barber->shop, barber->clientID);
+
    log_barber(barber);
 }
 
@@ -233,9 +255,14 @@ static void done(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
 
+   // notify a client that all its services are done
+   // function from barber-shop module
+   client_done(barber->shop, barber->clientID);
+   
    log_barber(barber);
 }
 
+// TODO Milestone 2
 static void process_haircut_request(Barber* barber)
 {
    /** TODO:

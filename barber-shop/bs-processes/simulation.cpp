@@ -104,7 +104,9 @@ static void go()
       
       log_barber(allBarbers+i);
    }
-
+   
+# define CLIENT_TEST false
+# if CLIENT_TEST
    for(int i = 0; i < global->NUM_CLIENTS; i++) 
    {
       // Launch Clients
@@ -123,6 +125,7 @@ static void go()
 
       log_client(allClients + i);
    }
+# endif
 
    // finish
    // TODO move this code to static void finish()
@@ -136,12 +139,14 @@ static void go()
       printf("Process %d returned\n", allBarbersIds[i]);
    }
 
+#if CLIENT_TEST
    printf("Waiting for clients processes to return\n");
    for (int i = 0; i < global->NUM_CLIENTS; i++)
    {
       pwaitpid(allClientsIds[i], &allClientsStatus[i], 0);
       printf("Process %d returned\n", allClientsIds[i]);
    }
+#endif
 }
 
 /**

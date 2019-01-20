@@ -147,6 +147,7 @@ static void life(Client* client)
    notify_client_death(client);
 }
 
+// TODO
 static void notify_client_birth(Client* client)
 {
    require (client != NULL, "client argument required");
@@ -158,6 +159,7 @@ static void notify_client_birth(Client* client)
    log_client(client);
 }
 
+// TODO 
 static void notify_client_death(Client* client)
 {
    /** TODO:
@@ -178,6 +180,8 @@ static void wandering_outside(Client* client)
 
    require (client != NULL, "client argument required");
 
+   client -> state = WANDERING_OUTSIDE;
+   spend(random_int(global->MIN_OUTSIDE_TIME_UNITS, global->MAX_OUTSIDE_TIME_UNITS)); // Based on line 127, barber-shop
    log_client(client);
 }
 
@@ -188,11 +192,21 @@ static int vacancy_in_barber_shop(Client* client)
     * 2: check if there is an empty seat in the client benches (at this instante, later on it may fail)
     **/
 
+   // ! CRITICAL ZONE: While checking for an empty seat, someone else might sit!
+
+   // TODO Semaphore lock
    require (client != NULL, "client argument required");
 
+   client -> state = WAITING_BARBERSHOP_VACANCY;
+   
    int res = 0;
+   if (num_available_benches_seats(client_benches(client -> shop)) > 0) { 
+      res = 1;
+   }
 
    log_client(client);
+
+   // TODO Semaphore unlock
    return res;
 }
 
@@ -204,6 +218,12 @@ static void select_requests(Client* client)
     **/
 
    require (client != NULL, "client argument required");
+
+   client -> state = SELECTING_REQUESTS;
+
+   // Requests are a value from 1 to 7 (3 bits <=> 3 services)
+   // TODO reimplement using given probabilities [PEDRO TOMORROW]
+   client -> requests = random_int(1, 7);
 
    log_client(client);
 }
@@ -218,6 +238,14 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
+   client -> state = WAITING_ITS_TURN;
+
+   // function returns its position in the clients' benches
+   client -> benchesPosition = enter_barber_shop(client -> shop, client -> id, client -> requests); 
+
+   // function returns its barber's ID
+   client -> barberID = greet_barber(client -> shop, client -> id);
+
    log_client(client);
 }
 
@@ -227,11 +255,18 @@ static void rise_from_client_benches(Client* client)
     * 1: (exactly what the name says)
     **/
 
+   // ! Critical zone: 2+ clients can rise at the same time!
+   // TODO Semaphore lock
+
    require (client != NULL, "client argument required");
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
-
+   
+   rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
+   client->benchesPosition = -1; // Invalid position, ie not in the bench (similar to rise_from_barber_bench function in barber module)
    log_client(client);
+
+   // TODO Semaphore unlock
 }
 
 static void wait_all_services_done(Client* client)
@@ -251,6 +286,7 @@ static void wait_all_services_done(Client* client)
 
    require (client != NULL, "client argument required");
 
+   // TODO [PEDRO TOMORROW]
    log_client(client); // more than one in proper places!!!
 }
 
