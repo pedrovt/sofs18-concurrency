@@ -260,16 +260,18 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
-   printf("WAIT ITS TURN");
    // 1: set the client state to WAITING_ITS_TURN
    client -> state = WAITING_ITS_TURN;
 
    // 2: enter barbershop (if necessary waiting for an empty seat)
    // function returns its position in the clients' benches
-   client -> benchesPosition = enter_barber_shop(client -> shop, client -> id, client -> requests); 
+   client -> benchesPosition = enter_barber_shop(client -> shop, client -> id, client -> requests);
+
+   send_log(client->logId, " entered barber shop");
 
    // function returns its barber's ID
    client -> barberID = greet_barber(client -> shop, client -> id);
+   send_log(client->logId, " greeted barber");
 
    ensure((client->barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
    log_client(client);

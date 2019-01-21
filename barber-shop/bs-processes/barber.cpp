@@ -177,20 +177,23 @@ static void wait_for_client(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   send_log(barber->logId, " WAIT FOR CLIENT");
    barber -> state = WAITING_CLIENTS;
 
    // thanks to the Threads version author!
-   while (empty_client_queue(&barber->shop->clientBenches.queue));
-      //while (no_more_clients(client_benches(barber -> shop))) {
-   printf("WAIT FOR CLIENT");
-      // wait
-      //}
 
+   // !BUG
+   // WHILE IS NEEDED & HAS BUG
+   while (empty_client_queue(&barber->shop->clientBenches.queue));
+   //while (no_more_clients(client_benches(barber -> shop)));
+   send_log(barber->logId, "AFTER WHILE");
    RQItem client = next_client_in_benches(client_benches(barber->shop));
-   
+
+   send_log(barber->logId, "AFTER CLIENT");
    barber -> clientID = client.clientID;
    barber -> reqToDo = client.request;
 
+   send_log(barber->logId, concat_3str("CLIENT IS (", int2str(client.clientID), ")"));
    receive_and_greet_client(barber -> shop, barber -> id, client.clientID);
 
    log_barber(barber); // (if necessary) more than one in proper places!!!

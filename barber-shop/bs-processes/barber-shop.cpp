@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "global.h"
 #include "barber-shop.h"
+#include <map>
 
 /* TODO: take a careful look to all the non static (public) functions, to check
  * if a proper synchronization is needed.
@@ -19,6 +20,7 @@
 
 static const int skel_length = 10000;
 static char skel[skel_length];
+std::map<int, int> clients_to_barbers_assocs;
 
 static char* to_string_barber_shop(BarberShop* shop);
 
@@ -333,9 +335,6 @@ void leave_barber_shop(BarberShop* shop, int clientID)
 }
 
 // TODO
-# include <map>
-std::map<int, int> clients_to_barbers_assocs;
-
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
@@ -343,17 +342,16 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
     * it must send the barber ID to the client
     **/
 
-   require (1 == 2, "RECEIVE AND GREET CLIENT");
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   
+   send_log(shop->logId, " receive_and_greet_client");
+
    // simple 2-dimentional array not a solution -> non constant number of barbers and clients
    // solution: map client ID -> barber ID
    clients_to_barbers_assocs.insert(std::pair<int, int>(clientID, barberID));
-   
-   printf("AAAAA %d", clients_to_barbers_assocs[clientID]);
+    
    ensure(clients_to_barbers_assocs.size() > 0 , "Map can't be empty");
        
 }
@@ -370,10 +368,13 @@ int greet_barber(BarberShop* shop, int clientID)
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    int res = 0;
-
-   while (clients_to_barbers_assocs.find(clientID) == clients_to_barbers_assocs.end());
+   send_log(shop->logId, " before while");
+   //! BUG
+   while (clients_to_barbers_assocs.find(clientID) == clients_to_barbers_assocs.end());   
+   send_log(shop->logId, " after while");
 
    res = clients_to_barbers_assocs.at(clientID);
+   send_log(shop->logId, " after at");
    clients_to_barbers_assocs.erase(clientID);
 
    // TODO unlock
