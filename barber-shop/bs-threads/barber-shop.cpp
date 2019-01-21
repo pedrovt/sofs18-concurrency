@@ -296,10 +296,6 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   /* while(&shop->service == NULL || shop->service.barberID != barberID)
-      pthread_cond_wait(&serviceCD, &serviceCR);
-   Service res = shop->service; */
-
    while(services.find(barberID) == services.end())
       pthread_cond_wait(&shop->serviceCD, &shop->serviceCR);
    Service res = services.at(barberID);

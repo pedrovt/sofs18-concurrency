@@ -81,7 +81,16 @@ typedef struct _BarberShop_
 
    pthread_mutex_t washbasinCR = PTHREAD_MUTEX_INITIALIZER; // Para os lavabos
    pthread_cond_t rise_washbasinCD = PTHREAD_COND_INITIALIZER; 
-   pthread_cond_t sit_washbasinCD = PTHREAD_COND_INITIALIZER; 
+   pthread_cond_t sit_washbasinCD = PTHREAD_COND_INITIALIZER;  
+
+   pthread_mutex_t scissorCR = PTHREAD_MUTEX_INITIALIZER; // Para as tesouras
+   pthread_cond_t scissor_returnCD = PTHREAD_COND_INITIALIZER;
+
+   pthread_mutex_t combCR = PTHREAD_MUTEX_INITIALIZER; // Para os pentes
+   pthread_cond_t comb_returnCD = PTHREAD_COND_INITIALIZER;
+
+   pthread_mutex_t razorCR = PTHREAD_MUTEX_INITIALIZER; // Para os razors
+   pthread_cond_t razor_returnCD = PTHREAD_COND_INITIALIZER;
 
 } BarberShop;
 
