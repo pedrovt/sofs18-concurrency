@@ -397,7 +397,17 @@ static void process_resquests_from_client(Barber* barber)
 
          drop_tools(barber, services[i]);
 
-         pthread_cond_wait(&greetCD, &greetCR);
+         if (is_barber_chair_service(&service))
+         {
+            while(barber_chair_with_a_client(barber_chair(barber->shop, barber->chairPosition)));
+            release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+         }
+         else
+         {
+            while(washbasin_with_a_client(washbasin(barber->shop, barber->basinPosition)));
+            release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+         }
+         log_barber(barber);
       }
    }
 }
@@ -409,8 +419,8 @@ static void release_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
-   rise_from_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->clientID);
-   release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+   //rise_from_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->clientID);
+   //release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
    log_barber(barber);
 }
 
