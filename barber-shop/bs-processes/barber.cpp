@@ -304,8 +304,38 @@ static void process_resquests_from_client(Barber* barber)
 
          // inform client on the service to be performed
          inform_client_on_service(barber->shop, service);
-
+         
          // grab the necessary tools from the pot
+         if(request == HAIRCUT_REQ) {
+            // pick scissor
+            barber -> state = REQ_SCISSOR;
+            log_barber(barber);
+            while(barber->shop->toolsPot.availScissors <= 0){
+               // TODO wait if there's no available scissors
+            }
+            pick_scissor(&barber->shop->toolsPot);
+            barber->tools = barber->tools | SCISSOR_TOOL;
+
+            // pick comb
+            barber -> state = REQ_COMB;
+            log_barber(barber);
+            while(barber->shop->toolsPot.availCombs <= 0){
+               // TODO wait if there's no available combs
+            }
+            pick_comb(&barber->shop->toolsPot);
+            barber->tools = barber->tools | COMB_TOOL;
+         }
+         else if(request == SHAVE_REQ) {
+            // pick razor
+            barber -> state = REQ_RAZOR;
+            log_barber(barber);
+            while(barber->shop->toolsPot.availRazors <= 0){
+               // TODO wait if there's no available razors
+            }
+            pick_razor(&barber->shop->toolsPot);
+            barber->tools = barber->tools | RAZOR_TOOL;
+         }
+
          // (if needed)
          if (request == SHAVE_REQ)           // shave requires a razor
          {
@@ -321,7 +351,7 @@ static void process_resquests_from_client(Barber* barber)
          }
          else if (request == HAIRCUT_REQ)    // haircut requires scissor & comb
          {
-            // same function for SCISSOR and COMB
+            process_haircut_request(barber);
          }
 
          // todo wait until client is in place
@@ -338,6 +368,30 @@ static void process_resquests_from_client(Barber* barber)
          */
 
          // todo return the used tools to the pot (if any)
+         if (request == HAIRCUT_REQ) {
+            // drop scissor
+            return_scissor(&barber -> shop -> toolsPot);
+            barber -> tools = barber -> tools & !SCISSOR_TOOL;
+            log_barber(barber);
+
+            // drop comb
+            return_comb(&barber -> shop -> toolsPot);
+            barber -> tools = barber -> tools & !COMB_TOOL;
+            log_barber(barber);
+         }
+         else if (request == SHAVE_REQ){
+            // drop razor
+            return_razor(&barber -> shop -> toolsPot);
+            barber -> tools = barber -> tools & !RAZOR_TOOL;
+            log_barber(barber);
+         }
+         if (is_barber_chair_service(&service)){
+            release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+         }
+         else{
+            release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+         }
+         log_barber(barber);
       }
    }
    
