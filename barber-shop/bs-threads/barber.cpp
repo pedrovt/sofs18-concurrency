@@ -138,9 +138,9 @@ static void life(Barber* barber)
       rise_from_barber_bench(barber);
       process_resquests_from_client(barber);
       spend(10000000);
-      /* release_client(barber);
+      release_client(barber);
       sit_in_barber_bench(barber);
-      wait_for_client(barber); */
+      wait_for_client(barber);
    }
    done(barber);
 }
@@ -226,6 +226,50 @@ static void rise_from_barber_bench(Barber* barber)
    log_barber(barber);
 }
 
+static void drop_tool(Barber * barber, const char * tool) 
+{
+   if (strcmp(tool, "scissor") == 0)
+   {
+      pthread_mutex_lock(&barber->shop->scissorCR);
+      return_scissor(&barber->shop->toolsPot);
+      barber->tools = barber->tools & !SCISSOR_TOOL;
+      log_barber(barber);
+      pthread_cond_signal(&barber->shop->scissor_returnCD);
+      pthread_mutex_unlock(&barber->shop->scissorCR);
+   }
+   else if (strcmp(tool, "comb") == 0)
+   {
+      pthread_mutex_lock(&barber->shop->combCR);
+      return_comb(&barber->shop->toolsPot);
+      barber->tools = barber->tools & !COMB_TOOL;
+      log_barber(barber);
+      pthread_cond_signal(&barber->shop->comb_returnCD);
+      pthread_mutex_unlock(&barber->shop->combCR);
+   }
+   else
+   {
+      pthread_mutex_lock(&barber->shop->razorCR);
+      return_razor(&barber->shop->toolsPot);
+      barber->tools = barber->tools & !RAZOR_TOOL;
+      log_barber(barber);
+      pthread_cond_signal(&barber->shop->razor_returnCD);
+      pthread_mutex_unlock(&barber->shop->razorCR);
+   }
+}
+
+static void drop_tools(Barber * barber, int request)
+{
+   if (request == HAIRCUT_REQ) 
+   {
+      drop_tool(barber, "scissor");
+      drop_tool(barber, "comb");
+   }
+   else if (request == SHAVE_REQ)
+   {
+      drop_tool(barber, "razor");
+   }
+}
+
 static void pickup_tool(Barber* barber, const char *tool)
 {
 
@@ -254,7 +298,7 @@ static void pickup_tool(Barber* barber, const char *tool)
       while(barber->shop->toolsPot.availRazors <= 0)
          pthread_cond_wait(&barber->shop->razor_returnCD, &barber->shop->razorCR);
       pick_razor(&barber->shop->toolsPot);
-      pthread_mutex_lock(&barber->shop->razorCR);
+      pthread_mutex_unlock(&barber->shop->razorCR);
       barber->tools = barber->tools | RAZOR_TOOL;
    }
 
@@ -351,70 +395,11 @@ static void process_resquests_from_client(Barber* barber)
          else
             process_shave_request(barber);
 
-         // Para parar apos o request servico estar completo
-         while(true)
-            pthread_cond_wait(&greetCD, &processCR);
+         drop_tools(barber, services[i]);
+
+         pthread_cond_wait(&greetCD, &greetCR);
       }
    }
-
-   /* while(barber->reqToDo == 0);
-
-   int request;
-   //select service
-   if( barber->reqToDo == barber->reqToDo | WASH_HAIR_REQ ){
-      request = WASH_HAIR_REQ;
-   }else if( barber->reqToDo == barber->reqToDo | HAIRCUT_REQ ){
-      request = HAIRCUT_REQ;
-   }else{
-      request = SHAVE_REQ;
-   }
-   //set state apropreately, request chair/basin
-   int seat;
-   Service service;
-   if( request == WASH_HAIR_REQ){
-      barber->state = WAITING_WASHBASIN;
-      log_barber(barber);
-      barber->basinPosition = reserve_random_empty_washbasin(barber->shop, barber->id);
-      log_barber(barber);
-      set_washbasin_service(&service, barber->id, barber->clientID, barber->basinPosition);
-   }else{
-      barber->state = WAITING_BARBER_SEAT;
-      log_barber(barber);
-      barber->chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-      log_barber(barber);
-      set_barber_chair_service(&service, barber->id, barber->clientID, seat, request);
-   }
-   //inform the client
-   inform_client_on_service(barber->shop, service);
-
-   ToolsPot tp = *tools_pot(barber->shop);
-   if(request == WASH_HAIR_REQ){
-      //no tools
-      process_hairwash_request(barber);
-   }else if( request == HAIRCUT_REQ ){
-      barber->state = REQ_COMB;
-      log_barber(barber);
-      pick_comb(&tp);
-      barber->state = REQ_SCISSOR;
-      log_barber(barber);
-      pick_scissor(&tp);
-      set_tools_barber_chair(barber_chair(barber->shop, barber->chairPosition), COMB_TOOL | SCISSOR_TOOL);
-      process_haircut_request(barber);
-      return_comb(&tp);
-      return_scissor(&tp);
-   }else{
-      barber->state = REQ_RAZOR;
-      log_barber(barber);
-      pick_razor(&tp);
-      set_tools_barber_chair(barber_chair(barber->shop, barber->chairPosition), RAZOR_TOOL);
-      process_haircut_request(barber);
-      pick_razor(&tp);
-   }
-
-   client_done(barber->shop, barber->clientID);
-
-   barber->state = WAITING_CLIENTS; */
-
 }
 
 static void release_client(Barber* barber)
@@ -424,9 +409,8 @@ static void release_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
-
-   client_done(barber->shop, barber->clientID);
-
+   rise_from_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->clientID);
+   release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
    log_barber(barber);
 }
 
