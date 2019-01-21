@@ -49,20 +49,13 @@ namespace sofs18
             //If the cache is empty, it has to be replenished before the retrieval takes place.
             if(sb->ircache.idx == INODE_REFERENCE_CACHE_SIZE) {
               sofs18::soReplenishIRCache();
-<<<<<<< HEAD
-                //Updates with the new information after the replenish
-=======
->>>>>>> master
             }
             uint32_t retrieved_node = sb->ircache.ref[sb->ircache.idx];
             //soITCheckHandler(handler,__FUNCTION__); --> apparently doesn't exist. But it's in the documentation
             sb->ircache.ref[sb->ircache.idx] = NullReference;
             sb->ircache.idx += 1;
             sb->ifree -= 1;
-<<<<<<< HEAD
-=======
             //Save SB
->>>>>>> master
             soSBSave();
             int handler = soITOpenInode(retrieved_node);
             SOInode* inode = soITGetInodePointer(handler);
@@ -78,16 +71,9 @@ namespace sofs18
             for(int i = 0; i < N_INDIRECT; i++) inode->i1[i] = NullReference;
             for(int i = 0; i < N_DOUBLE_INDIRECT; i++) inode->i2[i] = NullReference;
 
-<<<<<<< HEAD
-			//Save inode
-			soITSaveInode(handler);
-      soITCloseInode(handler);
-            //Save SB
-=======
             //Save inode
             soITSaveInode(handler);
             soITCloseInode(handler);
->>>>>>> master
             return retrieved_node;
         }
     };

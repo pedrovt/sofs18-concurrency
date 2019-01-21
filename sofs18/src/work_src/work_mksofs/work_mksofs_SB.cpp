@@ -15,11 +15,8 @@ namespace sofs18
             soProbe(602, "%s(%s, %u, %u, %u)\n", __FUNCTION__, name, ntotal, 
                     itotal, rdsize);
 
-<<<<<<< HEAD
-=======
             // Pedro Teixeira 84715
 
->>>>>>> master
             // Create SuperBlock
             SOSuperBlock sb;
 

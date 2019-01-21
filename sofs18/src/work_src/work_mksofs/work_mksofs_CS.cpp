@@ -51,18 +51,10 @@ namespace sofs18
                 rdsize = 1;
             }
 
-<<<<<<< HEAD
-//            std::cout << "Nr of inodes: " << itotal << " using a total of " << (itotal >> 3) << " blocks\n"; 
-//            std::cout << "Nr of blocks for free inodes references: " << (roundUp(itotal, 128) >> 7) << "\n";
-//            std::cout << "Nr of blocks for data: " << btotal << "\n";
-//            std::cout << "Nr of blocks for free data blocks references: " << (roundUp(blocksLeftData, 128) >> 7) << "\n";
-//            std::cout << "Nr of blocks for the root: " << rdsize << "\n";
-=======
             /* printf("%d\n", blocksLeftData);
             printf("%d\n", btotal);
             printf("%d\n", dataReferences);
             printf("%d\n", blocksLeft); */
->>>>>>> master
 
             //bin::computeStructure(ntotal, itotal, btotal, rdsize);
         }
