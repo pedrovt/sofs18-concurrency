@@ -228,32 +228,36 @@ static void rise_from_barber_bench(Barber* barber)
 
 static void pickup_tool(Barber* barber, const char *tool)
 {
-   pthread_mutex_lock(&toolCR);
 
    if(strcmp(tool, "scissor") == 0) {
       barber->state = REQ_SCISSOR;
       log_barber(barber);
+      pthread_mutex_lock(&barber->shop->scissorCR);
       while(barber->shop->toolsPot.availScissors <= 0)
-         pthread_cond_wait(&scissorCD, &toolCR);
+         pthread_cond_wait(&barber->shop->scissor_returnCD, &barber->shop->scissorCR);
       pick_scissor(&barber->shop->toolsPot);
+      pthread_mutex_unlock(&barber->shop->scissorCR);
       barber->tools = barber->tools | SCISSOR_TOOL;
    } else if(strcmp(tool, "comb") == 0) {
       barber->state = REQ_COMB;
       log_barber(barber);
+      pthread_mutex_lock(&barber->shop->combCR);
       while(barber->shop->toolsPot.availCombs <= 0)
-         pthread_cond_wait(&combCD, &toolCR);
+         pthread_cond_wait(&barber->shop->comb_returnCD, &barber->shop->combCR);
       pick_comb(&barber->shop->toolsPot);
+      pthread_mutex_unlock(&barber->shop->combCR);
       barber->tools = barber->tools | COMB_TOOL;
    } else {
       barber->state = REQ_RAZOR;
       log_barber(barber);
+      pthread_mutex_lock(&barber->shop->razorCR);
       while(barber->shop->toolsPot.availRazors <= 0)
-         pthread_cond_wait(&razorCD, &toolCR);
+         pthread_cond_wait(&barber->shop->razor_returnCD, &barber->shop->razorCR);
       pick_razor(&barber->shop->toolsPot);
+      pthread_mutex_lock(&barber->shop->razorCR);
       barber->tools = barber->tools | RAZOR_TOOL;
    }
 
-   pthread_mutex_unlock(&toolCR);
 }
 
 static void pickup_tools(Barber* barber, int request) 
@@ -329,7 +333,10 @@ static void process_resquests_from_client(Barber* barber)
          pickup_tools(barber, services[i]);
 
          // Se for um servico na cadeira de barbeiro defenir as ferramentas na mesma
-         // Para ambos os casos espera ate o cliente estar no sitio
+         // Para ambos os casos espera ate o cliente estar no sitio por busy waiting
+         // Wait nao e necessario pois ja nao se encontra dentro de uma zona critica
+         // E o cliente tambem nao demora quase nada a sentar-se, o tempo perdido com
+         // Troca de threads podia ser pior
          if(is_barber_chair_service(&service)) {
             while(!complete_barber_chair(&barber->shop->barberChair[barber->chairPosition]));       
             set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
