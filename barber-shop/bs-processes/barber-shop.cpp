@@ -20,8 +20,46 @@
 
 static const int skel_length = 10000;
 static char skel[skel_length];
+
 std::map<int, int> clients_to_barbers_assocs;
 
+// -------------------------------------------------
+// Auxiliar functions for semaphores
+static void unlock(int semid)
+{
+   psem_up(semid, 0);
+}
+
+static void lock(int semid)
+{
+   psem_down(semid, 0);
+}
+
+static int id = random_int(1, 10000);
+static int create_semaphore()
+{
+   //A key (key_t) is used to establish this common identifier. There are three possibilities to define a key:
+
+   //IPC_PRIVATE: In this case an alternative channel to communicate the identifier between processes is necessary(parent / child fork, file system, ...).
+   //A fixed predetermined key number(may collide with other existing keys).
+   //ftok function to generate a key from a path and a byte integer.key_t key = ftok("/tmp/", id);
+
+   // for now i choose a fixed predetermined key number (just to see if it works)
+   // todo change how the key is determined 
+   int semid = psemget(id, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   id = id + 1;
+   unlock(semid);
+   return semid;
+}
+
+static void destroy_semaphore(int semid) {
+   // destroy sem 0:
+   psemctl(semid, 0, IPC_RMID, NULL);
+}
+
+int greet_semaphore = create_semaphore();
+
+// -------------------------------------------------
 static char* to_string_barber_shop(BarberShop* shop);
 
 int num_lines_barber_shop(BarberShop* shop)
@@ -334,6 +372,7 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
+//! BUGS !!!!!!!!!!!!!!!!!!!!!!
 // TODO
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
@@ -342,7 +381,11 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
     * it must send the barber ID to the client
     **/
 
-   require (shop != NULL, "shop argument required");
+   // !Critical area. A client can be trying to greet a barber
+   // TODO sem_greet semaphore lock
+   lock(greet_semaphore);
+
+   require(shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
@@ -351,7 +394,10 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    // simple 2-dimentional array not a solution -> non constant number of barbers and clients
    // solution: map client ID -> barber ID
    clients_to_barbers_assocs.insert(std::pair<int, int>(clientID, barberID));
-    
+
+   // TODO sem_greet semaphore unlock
+   unlock(greet_semaphore);
+
    ensure(clients_to_barbers_assocs.size() > 0 , "Map can't be empty");
        
 }
@@ -362,14 +408,36 @@ int greet_barber(BarberShop* shop, int clientID)
     * function called from a client, expecting to receive its barber's ID
     **/
 
-   // !Criticial zone
+   // !Critical zone
+   
    // TODO lock
+   lock(greet_semaphore);
+
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    int res = 0;
-   send_log(shop->logId, " before while");
-   //! BUG
+   send_log(shop->logId, " before while at greet_barber");
+
+   //! BUG (21 Jan 23h)
+   // the idea of the following code is, until the client does NOT have a barber
+   // associated this function will wait
+
+   // for some reason when this function is called, receive_and_greet_client hasn't
+   // been called yet so this while is an infinite loop.
+   // receive_and_greet_client should be called so we have a pair
+   // clientID -> barberID in the map clients_to_barbers_assocs
+   // for some reason it seems it's not beeing called (should be barber's fault)
+   // I know the function is being called or not thanks to the log receive_and_greet_client
+
+   // see https://www.geeksforgeeks.org/map-associative-containers-the-c-standard-template-library-stl/
+   // for how-to-use maps
+
+   // see related functions receive_and_greet_client (just before this one)
+   // and wait_for_client in barber
+
+   // also please verify the functions associated with the semaphores
+
    while (clients_to_barbers_assocs.find(clientID) == clients_to_barbers_assocs.end());   
    send_log(shop->logId, " after while");
 
@@ -377,7 +445,8 @@ int greet_barber(BarberShop* shop, int clientID)
    send_log(shop->logId, " after at");
    clients_to_barbers_assocs.erase(clientID);
 
-   // TODO unlock
+   unlock(greet_semaphore);
+
    ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
    return res;
 }
@@ -395,6 +464,7 @@ void close_shop(BarberShop* shop)
    require (shop_opened(shop), "barber shop already closed");
  
    shop->opened = 0;
+   destroy_semaphore(greet_semaphore);
 }
 
 static char* to_string_barber_shop(BarberShop* shop)
