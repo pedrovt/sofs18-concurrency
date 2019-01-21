@@ -28,7 +28,7 @@ namespace sofs18
             int last_block = first_block + num_blocks - 1;
             uint32_t num = ReferencesPerBlock;
             uint32_t index = 1; //Starts with 1, because the first inode has been used for the root directory
-            for(uint32_t i = first_block; i <= last_block; i++){
+            for(int i = first_block; i <= last_block; i++){
             	/* Checks if the current block is the last. If so, calculates how many references must be filled.
             	   Else it just fills all ReferencesPerBlock references */
             	if(i == last_block) num = itotal - ReferencesPerBlock * (num_blocks-1);
@@ -46,7 +46,6 @@ namespace sofs18
             }
             return num_blocks;
         }
-
     };
 
 };

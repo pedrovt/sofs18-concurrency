@@ -30,14 +30,19 @@ namespace sofs18
     	*/
         uint32_t soAllocDataBlock()
         {
-            soProbe(441, "%s()\n", __FUNCTION__);
-            SOSuperBlock* sb = soSBGetPointer();
-            if(sb->dz_free <= 0){
-            	throw SOException(ENOSPC,__FUNCTION__);
+          soProbe(441, "%s()\n", __FUNCTION__);
+          SOSuperBlock* sb = soSBGetPointer();
+          if(sb->dz_free <= 0){
+            throw SOException(ENOSPC,__FUNCTION__);
          	}
+<<<<<<< HEAD
          	if(sb->brcache.idx == BLOCK_REFERENCE_CACHE_SIZE-1){
             sofs18::soReplenishBRCache();
          		sb = soSBGetPointer();
+=======
+         	if(sb->brcache.idx == BLOCK_REFERENCE_CACHE_SIZE){
+         	  sofs18::soReplenishBRCache();
+>>>>>>> master
          	}
          	uint32_t retrieved_block = sb->brcache.ref[sb->brcache.idx];
          	sb->brcache.ref[sb->brcache.idx] = NullReference;

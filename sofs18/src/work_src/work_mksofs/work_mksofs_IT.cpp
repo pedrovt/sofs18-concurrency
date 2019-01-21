@@ -64,7 +64,7 @@ namespace sofs18
               for (int j = 0; j < N_INDIRECT; j++) { inode_table[i].i1[j] = NullReference; }
               for (int j = 0; j < N_DOUBLE_INDIRECT; j++) { inode_table[i].i2[j] = NullReference; }
             }
-            soWriteRawBlock(first_block, &inode_table);
+            sofs18::soWriteRawBlock(first_block, &inode_table);
             
             // fill in the rest of the inode table
             for (uint32_t block = first_block+1; block <= itotal/InodesPerBlock+1; block++)
@@ -83,8 +83,8 @@ namespace sofs18
                 for (int j = 0; j < N_DOUBLE_INDIRECT; j++) { inode_table[inode].i2[j] = NullReference; }
               }
               
-              // escrita da IT no disco
-              soWriteRawBlock(block, &inode_table);
+              // escrita da restante IT no bloco
+              sofs18::soWriteRawBlock(block, &inode_table);
             }
 
             return itotal/InodesPerBlock;

@@ -17,16 +17,27 @@ namespace sofs18
 {
     namespace work
     {
-
         uint32_t soTraversePath(char *path)
         {
             soProbe(221, "%s(%s)\n", __FUNCTION__, path);
-
-            /* change the following line by your code */
-            return bin::soTraversePath(path);
+           
+            char *parent_dir = dirname(strdupa(path));
+            char *base_dir = basename(strdupa(path));
+            if (strcmp(base_dir, parent_dir)==0) { return 0; }
+            uint32_t parent_inode = soTraversePath(parent_dir);
+            int ih = soITOpenInode(parent_inode);
+            if (soCheckInodeAccess(ih, 1))
+            {
+              uint32_t dir=sofs18::soGetDirEntry(ih,base_dir);
+              soITCloseInode(ih);
+              if (dir != NullReference)
+              {
+                return dir;
+              }
+              throw SOException(ENOENT, __FUNCTION__);
+            }
+            throw SOException(EACCES, __FUNCTION__);
         }
-
     };
-
 };
 

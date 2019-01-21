@@ -48,6 +48,7 @@ namespace sofs18
 					uint32_t numBytes = (ReferencesPerBlock - position_in_block) * sizeof(uint32_t);
 					//copy references from cache to the FBLT
 					memcpy(&block[position_in_block], &(bicache.ref), numBytes);
+					sb -> fblt_tail += ReferencesPerBlock - position_in_block;
 					//save the references that wont be deleted
 					uint32_t arr[bicache.idx - (ReferencesPerBlock - position_in_block)];
 					uint32_t index = 0;
@@ -69,6 +70,7 @@ namespace sofs18
 					uint32_t numBytes = bicache.idx * sizeof(uint32_t);
 					//copy references from the cache to the FBLT
 					memcpy(&block[position_in_block], &(bicache.ref), numBytes);
+					sb->fblt_tail += bicache.idx;
 					//delete those references from the cache
 					for(uint32_t i=0; i<bicache.idx; i++) {
 						bicache.ref[i] = NullReference;
@@ -78,7 +80,7 @@ namespace sofs18
 				}
 
 			}
-				}
+		}
 	
 		soFBLTSaveBlock();
 		soFBLTCloseBlock();
