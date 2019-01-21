@@ -305,10 +305,14 @@ static void wait_all_services_done(Client* client)
    if(is_barber_chair_service(&service)) {
       sit_in_barber_chair(&client->shop->barberChair[service_position(&service)], client->id);
       client->state = service.request == SHAVE_REQ ? HAVING_A_SHAVE : HAVING_A_HAIRCUT;
+      pthread_cond_broadcast(&client->shop->sit_barber_chairCD);
    } else {
       sit_in_washbasin(&client->shop->washbasin[service_position(&service)], client->id);
       client->state = HAVING_A_HAIR_WASH;
+      pthread_cond_broadcast(&client->shop->sit_washbasinCD);
    }
+
+   log_client(client);
 
 }
 
