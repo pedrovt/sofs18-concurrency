@@ -333,17 +333,29 @@ void leave_barber_shop(BarberShop* shop, int clientID)
 }
 
 // TODO
-void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
+# include <map>
+std::map<int, int> clients_to_barbers_assocs;
+
+void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
     * function called from a barber, when receiving a new client
     * it must send the barber ID to the client
     **/
 
+   require (1 == 2, "RECEIVE AND GREET CLIENT");
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
+   
+   // simple 2-dimentional array not a solution -> non constant number of barbers and clients
+   // solution: map client ID -> barber ID
+   clients_to_barbers_assocs.insert(std::pair<int, int>(clientID, barberID));
+   
+   printf("AAAAA %d", clients_to_barbers_assocs[clientID]);
+   ensure(clients_to_barbers_assocs.size() > 0 , "Map can't be empty");
+       
 }
 
 int greet_barber(BarberShop* shop, int clientID)
@@ -352,10 +364,20 @@ int greet_barber(BarberShop* shop, int clientID)
     * function called from a client, expecting to receive its barber's ID
     **/
 
+   // !Criticial zone
+   // TODO lock
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    int res = 0;
+
+   while (clients_to_barbers_assocs.find(clientID) == clients_to_barbers_assocs.end());
+
+   res = clients_to_barbers_assocs.at(clientID);
+   clients_to_barbers_assocs.erase(clientID);
+
+   // TODO unlock
+   ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
    return res;
 }
 

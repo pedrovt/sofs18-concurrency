@@ -138,7 +138,9 @@ static void life(Client* client)
       if (vacancy_in_barber_shop(client))
       {
          select_requests(client);
+         send_log(client->logId, " WAITING FOR ITS TURN");
          wait_its_turn(client);
+         send_log(client->logId, " DONE WAITING FOR ITS TURN");
          rise_from_client_benches(client);
          wait_all_services_done(client);
          i++;
@@ -167,7 +169,7 @@ static void notify_client_death(Client* client)
 
    require (client != NULL, "client argument required");
 
-   leave_barber_shop(client -> shop, client -> id);
+   //leave_barber_shop(client -> shop, client -> id);
    log_client(client);
 }
 
@@ -226,18 +228,24 @@ static void select_requests(Client* client)
    
    if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
    {
-      client -> requests = client -> requests | HAIRCUT_REQ;
+      client -> requests = (client -> requests) | HAIRCUT_REQ;
    }
    if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
    {
-      client -> requests = client -> requests | WASH_HAIR_REQ;
+      client -> requests = (client -> requests) | WASH_HAIR_REQ;
    }
    if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
    {
-      client -> requests = client -> requests | SHAVE_REQ;
+      client -> requests = (client -> requests) | SHAVE_REQ;
    }
 
-   check (((client -> requests )>= 1 && (client -> requests) <= 7), "invalid client requests");
+   // TODO fix this (no request is selected)
+   if (client -> requests == 0) {
+      //select_requests(client);
+      client -> requests = WASH_HAIR_REQ;
+   }
+   
+   check(((client->requests) >= 1 && (client->requests) <= 7), concat_2str("invalid client request ", int2str(client->requests)));
    
    log_client(client);
 }
@@ -252,14 +260,18 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
+   printf("WAIT ITS TURN");
+   // 1: set the client state to WAITING_ITS_TURN
    client -> state = WAITING_ITS_TURN;
 
+   // 2: enter barbershop (if necessary waiting for an empty seat)
    // function returns its position in the clients' benches
    client -> benchesPosition = enter_barber_shop(client -> shop, client -> id, client -> requests); 
 
    // function returns its barber's ID
    client -> barberID = greet_barber(client -> shop, client -> id);
 
+   ensure((client->barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
    log_client(client);
 }
 

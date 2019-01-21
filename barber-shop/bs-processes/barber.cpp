@@ -135,7 +135,6 @@ static void life(Barber* barber)
    {
       rise_from_barber_bench(barber);
       process_resquests_from_client(barber);
-      // TODO uncomment for next milestone
       release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber); 
@@ -174,21 +173,28 @@ static void wait_for_client(Barber* barber)
     **/
    
    // !Critical zone: 2 barbers trying to access the clients queue
-
    // TODO semaphore to lock
+
    require (barber != NULL, "barber argument required");
 
    barber -> state = WAITING_CLIENTS;
-   while (no_more_clients(client_benches(barber -> shop))) {
-      // wait
-   }
 
-   RQItem client = next_client_in_benches(client_benches(barber -> shop));
+   // thanks to the Threads version author!
+   while (empty_client_queue(&barber->shop->clientBenches.queue));
+      //while (no_more_clients(client_benches(barber -> shop))) {
+   printf("WAIT FOR CLIENT");
+      // wait
+      //}
+
+   RQItem client = next_client_in_benches(client_benches(barber->shop));
+   
+   barber -> clientID = client.clientID;
+   barber -> reqToDo = client.request;
+
    receive_and_greet_client(barber -> shop, barber -> id, client.clientID);
 
-   //receive_and_greet_client
    log_barber(barber); // (if necessary) more than one in proper places!!!
-   
+
    // TODO semaphore to lock
 }
 
