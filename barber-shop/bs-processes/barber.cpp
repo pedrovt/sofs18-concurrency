@@ -151,6 +151,7 @@ static void life(Barber* barber)
       sit_in_barber_bench(barber);
       wait_for_client(barber); 
    }
+   psemctl(accessrc, 0, IPC_RMID, NULL);
    done(barber);
 }
 
