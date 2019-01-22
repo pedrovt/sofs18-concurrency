@@ -116,11 +116,11 @@ static void go()
       // Routine to run is main_client()
       //! Just 1 process for all clients?
 
-      Client* client = &allClients[i];
+      Client* client = &allClients[0];
       check(client != NULL, "client to associate with process can't be null");
       
       pid_t id = pfork();
-      allClientsIds[i] = id;
+      allClientsIds[0] = id;
       
       // Child side: run Routine
       if (id == 0) { 
@@ -129,11 +129,6 @@ static void go()
 
       //log_client(allClients + i);
    }
-
-   // finish
-   // TODO move this code to static void finish()
-   
-
 }
 
 /**

@@ -71,7 +71,7 @@ static int create_semaphore(){
    psem_up(semid, 0);
    return semid;
 }
-int accessrc = create_semaphore();          // controlo de acesso Ã s regiÃµes crÃ­ticas
+int accessrc = create_semaphore();          // controlo de acesso a regiões críticas
 
 size_t sizeof_barber()
 {
@@ -177,6 +177,8 @@ static void sit_in_barber_bench(Barber* barber)
    log_barber(barber);
 }
 
+// TODO
+//! BUGS
 static void wait_for_client(Barber* barber)
 {
    /** TODO:
@@ -201,8 +203,7 @@ static void wait_for_client(Barber* barber)
    // 2: get next client from client benches (if empty, wait)
    ClientBenches* benches;
    aux_get_client_benches(benches);
-   while (empty_client_queue(&(benches->queue)))
-      ; //! <- where i suspect the bug is
+   while (empty_client_queue(&(benches->queue))); //! <- where i suspect the bug is
 
    // but never reaches this
    send_log(barber->logId, "AFTER WHILE");
@@ -220,13 +221,13 @@ static void wait_for_client(Barber* barber)
    psem_up(accessrc, 0);
 }
 
-// TODO
+// TODO after bug
 static int work_available(Barber* barber)
 {
    /** TODO:
     * 1: find a safe way to solve the problem of barber termination
     **/
-
+   // if clientqueue is empty: done(barber)?
    require (barber != NULL, "barber argument required");
 
    return 1;
@@ -248,7 +249,7 @@ static void rise_from_barber_bench(Barber* barber){
    log_barber(barber);
 }
 
-// TODO Milestone 1/2
+// TODO after bug
 static void process_resquests_from_client(Barber* barber)
 {
    /** TODO:
@@ -409,6 +410,7 @@ static void process_resquests_from_client(Barber* barber)
    ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
+// TODO after bug
 static void release_client(Barber* barber)
 {
    /** TODO:
@@ -436,7 +438,7 @@ static void done(Barber* barber)
    log_barber(barber);
 }
 
-// TODO Milestone 2
+// TODO after bug
 static void process_haircut_request(Barber* barber)
 {
    /** TODO:
@@ -461,6 +463,7 @@ static void process_haircut_request(Barber* barber)
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 }
 
+// TODO after bug
 static void process_hairwash_request(Barber* barber){
    /** TODO:
     * ([incomplete] example code for task completion algorithm)
@@ -480,6 +483,7 @@ static void process_hairwash_request(Barber* barber){
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 }
 
+// TODO after bug
 static void process_shave_request(Barber* barber){
    /** TODO:
     * ([incomplete] example code for task completion algorithm)

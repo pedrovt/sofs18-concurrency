@@ -104,11 +104,12 @@ void aux_set_barberID(int barberID, int clientID)
    require(barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require(clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-
    lock();
 
    aux -> barberIDs[barberID - 1] = clientID;
 
+   ensure(aux->barberIDs[barberID - 1] == clientID, "internal error on set_clientID");
+   
    unlock();
 }
 
@@ -122,6 +123,7 @@ void aux_set_clientID(int barberID, int clientID)
    aux -> clientIDs[clientID - 1] = barberID;
 
    ensure(aux->clientIDs[clientID - 1] == barberID, "internal error on set_clientID");
+   
    unlock();
 }
 
@@ -182,7 +184,7 @@ void aux_set_client_benches(ClientBenches clientBenches)
    unlock();
 }
 
-// -------------------------------------------------
+// #############################################################################
 static char* to_string_barber_shop(BarberShop* shop);
 
 int num_lines_barber_shop(BarberShop* shop)
@@ -202,6 +204,7 @@ int num_columns_barber_shop(BarberShop* shop)
    return w.ws_col == 0 ? 80 : w.ws_col;
 }
 
+// ?with small changes
 void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
                       int num_scissors, int num_combs, int num_razors, int num_basins, 
                       int num_client_benches_seats, int num_client_benches)
@@ -256,6 +259,7 @@ void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
    aux_connect();
 }
 
+//? with small changes
 void term_barber_shop(BarberShop* shop)
 {
    require (shop != NULL, "shop argument required");
@@ -357,6 +361,7 @@ int num_available_barber_chairs(BarberShop* shop)
    return res;
 }
 
+// ?might have to be called
 int reserve_random_empty_barber_chair(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -392,6 +397,7 @@ int num_available_washbasin(BarberShop* shop)
    return res;
 }
 
+// ?might have to be called
 int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -428,6 +434,7 @@ int is_client_inside(BarberShop* shop, int clientID)
    return res;
 }
 
+// TODO not done
 Service wait_service_from_barber(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -441,6 +448,7 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    return res;
 }
 
+// TODO not done
 void inform_client_on_service(BarberShop* shop, Service service)
 {
    /** TODO:
@@ -451,6 +459,7 @@ void inform_client_on_service(BarberShop* shop, Service service)
 
 }
 
+// TODO not done
 void client_done(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -462,6 +471,7 @@ void client_done(BarberShop* shop, int clientID)
 
 }
 
+// ? might need to be called
 int enter_barber_shop(BarberShop* shop, int clientID, int request)
 {
    /** TODO:
@@ -474,14 +484,14 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require (num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
    
-   
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
-   shop->clientsInside[shop->numClientsInside++] = clientID;
+   shop -> clientsInside[shop->numClientsInside++] = clientID;
 
    aux_set_client_benches(*client_benches(shop));
    return res;
 }
 
+// ? might need to be called
 void leave_barber_shop(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -501,6 +511,12 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
+// #############################################################################
+// #############################################################################
+// #############################################################################
+// #############################################################################
+// TODO
+// !HAS BUGS
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
@@ -518,6 +534,8 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    aux_set_barberID(barberID, clientID);       
 }
 
+// TODO 
+// !HAS BUGS
 int greet_barber(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -537,6 +555,11 @@ int greet_barber(BarberShop* shop, int clientID)
 
    return res;
 }
+
+// #############################################################################
+// #############################################################################
+// #############################################################################
+// #############################################################################
 
 int shop_opened(BarberShop* shop)
 {
