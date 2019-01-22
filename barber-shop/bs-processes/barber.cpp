@@ -64,6 +64,15 @@ static void process_hairwash_request(Barber* barber);
 
 static char* to_string_barber(Barber* barber);
 
+static int id = random_int(1, 10000);
+static int create_semaphore(){
+   int semid = psemget(id, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   id = id + 1;
+   psem_up(semid, 0);
+   return semid;
+}
+int accessrc = create_semaphore();          // controlo de acesso às regiões críticas
+
 size_t sizeof_barber()
 {
    return sizeof(Barber);
@@ -153,7 +162,7 @@ static void sit_in_barber_bench(Barber* barber)
 
    // !Critical zone: 2 barbers trying to seat in the same bench
 
-   // TODO semaphore to lock
+   psem_down(accessrc, 0);
    
    require (barber != NULL, "barber argument required");
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
@@ -163,7 +172,7 @@ static void sit_in_barber_bench(Barber* barber)
 
    ensure ((barber -> benchPosition) >= 0, "invalid barber bench position");
    
-   // TODO semaphore to unlock
+   psem_up(accessrc, 0);
    log_barber(barber);
 }
 
@@ -176,7 +185,7 @@ static void wait_for_client(Barber* barber)
     **/
    
    // !Critical zone: 2 barbers trying to access the clients queue
-   // TODO semaphore to lock
+   psem_down(accessrc, 0);
 
    require (barber != NULL, "barber argument required");
 
@@ -204,7 +213,7 @@ static void wait_for_client(Barber* barber)
 
    log_barber(barber); // (if necessary) more than one in proper places!!!
 
-   // TODO semaphore to lock
+   psem_up(accessrc, 0);
 }
 
 // TODO
@@ -279,12 +288,12 @@ static void process_resquests_from_client(Barber* barber)
             barber -> state = WAITING_WASHBASIN;
             log_barber(barber); //confirm if it's the best place 
 
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             while (num_available_washbasin(barber -> shop) <= 0) {
                // TODO wait if there's no available washbasins
             }
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
-            // TODO unlock semaphore
+            psem_up(accessrc, 0);
 
             barber->basinPosition = basinPosition;
             set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
@@ -295,12 +304,12 @@ static void process_resquests_from_client(Barber* barber)
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber); //confirm if it's the best place
 
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             while (num_available_barber_chairs(barber->shop) <= 0){
                // TODO wait if there's no available barber chairs
             }
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-            // TODO unlock semaphore
+            psem_up(accessrc, 0);
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -314,36 +323,36 @@ static void process_resquests_from_client(Barber* barber)
             // pick scissor
             barber -> state = REQ_SCISSOR;
             log_barber(barber);
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             while(barber->shop->toolsPot.availScissors <= 0){
                // TODO wait if there's no available scissors
             }
             pick_scissor(&barber->shop->toolsPot);
             barber->tools = barber->tools | SCISSOR_TOOL;
-            // TODO unlock with semaphore
+            psem_up(accessrc, 0);
 
             // pick comb
             barber -> state = REQ_COMB;
             log_barber(barber);
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             while(barber->shop->toolsPot.availCombs <= 0){
                // TODO wait if there's no available combs
             }
             pick_comb(&barber->shop->toolsPot);
             barber->tools = barber->tools | COMB_TOOL;
-            // TODO unlock with semaphore
+            psem_up(accessrc, 0);
          }
          else if(request == SHAVE_REQ) {     // shave requires a razor
             // pick razor
             barber -> state = REQ_RAZOR;
             log_barber(barber);
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             while(barber->shop->toolsPot.availRazors <= 0){
                // TODO wait if there's no available razors
             }
             pick_razor(&barber->shop->toolsPot);
             barber->tools = barber->tools | RAZOR_TOOL;
-            // TODO unlock with semaphore
+            psem_up(accessrc, 0);
          }
 
          // process requests
@@ -359,25 +368,23 @@ static void process_resquests_from_client(Barber* barber)
          // return the used tools to the pot (if any)
          if (request == HAIRCUT_REQ) {
             // drop scissor
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             return_scissor(&barber -> shop -> toolsPot);
             barber -> tools = barber -> tools & !SCISSOR_TOOL;
-            // TODO unlock with semaphore
             log_barber(barber);
 
             // drop comb
-            // TODO lock with semaphore
             return_comb(&barber -> shop -> toolsPot);
             barber -> tools = barber -> tools & !COMB_TOOL;
-            // TODO unlock with semaphore
+            psem_up(accessrc, 0);
             log_barber(barber);
          }
          else if (request == SHAVE_REQ){
             // drop razor
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             return_razor(&barber -> shop -> toolsPot);
             barber -> tools = barber -> tools & !RAZOR_TOOL;
-            // TODO unlock with semaphore
+            psem_up(accessrc, 0);
             log_barber(barber);
          }
          if (is_barber_chair_service(&service)){
