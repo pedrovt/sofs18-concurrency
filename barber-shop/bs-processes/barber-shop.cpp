@@ -477,6 +477,8 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop->clientsInside[shop->numClientsInside++] = clientID;
+
+   aux_set_client_benches(*client_benches(shop));
    return res;
 }
 
