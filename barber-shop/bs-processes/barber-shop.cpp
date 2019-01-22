@@ -16,48 +16,152 @@
 
 /* TODO: change here this file to your needs */
 
-
-
 static const int skel_length = 10000;
 static char skel[skel_length];
 
-std::map<int, int> clients_to_barbers_assocs;
+// ----------------------------------------------------------
+// semaphores
+const long key = 0x206EL;
+static int shmid = -1;
 
-// -------------------------------------------------
+// shared memory structure
+typedef struct _AuxiliarStructure_
+{
+   // id of semaphore to control the access
+   int semid; 
+
+   // replaces the map
+   int barberIDs[MAX_BARBERS];      // barberID -> clientID
+   int clientIDs[MAX_CLIENTS];      // clientID -> barberID
+
+   // others might be needed
+} AuxiliarStructure;
+
+static AuxiliarStructure *aux = NULL;
+
 // Auxiliar functions for semaphores
-static void unlock(int semid)
+static void unlock()
 {
-   psem_up(semid, 0);
+   struct sembuf up = {0, 1, 0};
+   psemop(aux->semid, &up, 1);
 }
 
-static void lock(int semid)
+static void lock()
 {
-   psem_down(semid, 0);
+   struct sembuf down = {0, -1, 0};
+   psemop(aux->semid, &down, 1);
 }
 
-static int id = random_int(1, 10000);
-static int create_semaphore()
+// Auxiliar functions for shared memory structure
+void aux_create()
 {
-   //A key (key_t) is used to establish this common identifier. There are three possibilities to define a key:
+   /* create the shared memory */
+   shmid = pshmget(key, sizeof(AuxiliarStructure), 0600 | IPC_CREAT | IPC_EXCL);
 
-   //IPC_PRIVATE: In this case an alternative channel to communicate the identifier between processes is necessary(parent / child fork, file system, ...).
-   //A fixed predetermined key number(may collide with other existing keys).
-   //ftok function to generate a key from a path and a byte integer.key_t key = ftok("/tmp/", id);
+   /* attach shared memory to process addressing space */
+   aux = (AuxiliarStructure*) pshmat(shmid, NULL, 0);
 
-   // for now i choose a fixed predetermined key number (just to see if it works)
-   // todo change how the key is determined 
-   int semid = psemget(id, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   id = id + 1;
-   unlock(semid);
-   return semid;
+   /* create access locker */
+   aux -> semid = psemget(key, 1, 0600 | IPC_CREAT | IPC_EXCL);
+
+   /* unlock shared data structure */
+   unlock();
+
+   /* detach shared memory from process addressing space */
+   pshmdt(aux);
+   aux = NULL;
 }
 
-static void destroy_semaphore(int semid) {
-   // destroy sem 0:
-   psemctl(semid, 0, IPC_RMID, NULL);
+void aux_connect()
+{
+   /* get access to the shared memory */
+   shmid = pshmget(key, sizeof(AuxiliarStructure), 0);
+
+   /* attach shared memory to process addressing space */
+   aux = (AuxiliarStructure*) pshmat(shmid, NULL, 0);
 }
 
-int greet_semaphore = create_semaphore();
+void aux_destroy()
+{
+   /* destroy the locker semaphore */
+   psemctl(aux->semid, 0, IPC_RMID, NULL);
+
+   /* detach shared memory from process addressing space */
+   pshmdt(aux);
+   aux = NULL;
+
+   /* ask OS to destroy the shared memory */
+   pshmctl(shmid, IPC_RMID, NULL);
+   shmid = -1;
+}
+
+// Getters and setters
+/* set shared data with new values */
+void aux_set_barberID(int barberID, int clientID)
+{
+   require(barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
+   require(clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
+
+
+   lock();
+
+   aux -> barberIDs[barberID - 1] = clientID;
+
+   unlock();
+}
+
+void aux_set_clientID(int barberID, int clientID)
+{
+   require(barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
+   require(clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
+
+   lock();
+
+   aux -> clientIDs[clientID - 1] = barberID;
+
+   unlock();
+}
+
+/* get current values of shared data */
+int aux_get_barberID(int clientID)
+{
+   require(clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
+
+   require (1 == 0, "BEFORE LOCK");
+   lock();
+   require(1 == 0, "AFTER LOCK");
+
+   int res = -1;
+   for (int a = 0; a < MAX_BARBERS; a++)
+   {
+      if (aux -> barberIDs[a] == clientID)
+         res = aux -> barberIDs[a];
+   }
+
+   unlock();
+
+   ensure(res > -1, "invalid barber id for client"); 
+   return res;
+}
+
+int aux_get_clientID(int barberID)
+{
+   require(barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
+
+   lock();
+
+   int res = -1;
+   for (int b = 0; b < MAX_CLIENTS; b++)
+   {
+      if (aux ->clientIDs[b] == barberID)
+         res = aux -> clientIDs[b];
+   }
+
+   unlock();
+
+   ensure(res > -1, "invalid client id for barber");
+   return res;
+}
 
 // -------------------------------------------------
 static char* to_string_barber_shop(BarberShop* shop);
@@ -128,6 +232,9 @@ void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
       init_washbasin(shop->washbasin+i, i+1, 1+3+num_lines_barber_chair(), num_columns_tools_pot()+3+11+1+i*(num_columns_washbasin()+2));
    init_client_benches(&shop->clientBenches, num_client_benches_seats, num_client_benches, 1+3+num_lines_barber_chair()+num_lines_tools_pot(), 16);
 
+   // ! Aux structs
+   aux_create();
+   aux_connect();
 }
 
 void term_barber_shop(BarberShop* shop)
@@ -347,7 +454,8 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
    require (num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
-
+   
+   
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop->clientsInside[shop->numClientsInside++] = clientID;
    return res;
@@ -372,34 +480,21 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
-//! BUGS !!!!!!!!!!!!!!!!!!!!!!
-// TODO
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
     * function called from a barber, when receiving a new client
     * it must send the barber ID to the client
     **/
-
-   // !Critical area. A client can be trying to greet a barber
-   // TODO sem_greet semaphore lock
-   lock(greet_semaphore);
-
    require(shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    send_log(shop->logId, " receive_and_greet_client");
 
-   // simple 2-dimentional array not a solution -> non constant number of barbers and clients
-   // solution: map client ID -> barber ID
-   clients_to_barbers_assocs.insert(std::pair<int, int>(clientID, barberID));
-
-   // TODO sem_greet semaphore unlock
-   unlock(greet_semaphore);
-
-   ensure(clients_to_barbers_assocs.size() > 0 , "Map can't be empty");
-       
+   // !Critical area. A client can be trying to greet a barber
+   aux_set_clientID(barberID, clientID);
+   aux_set_barberID(barberID, clientID);       
 }
 
 int greet_barber(BarberShop* shop, int clientID)
@@ -408,46 +503,17 @@ int greet_barber(BarberShop* shop, int clientID)
     * function called from a client, expecting to receive its barber's ID
     **/
 
-   // !Critical zone
-   
-   // TODO lock
-   lock(greet_semaphore);
-
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   int res = 0;
-   send_log(shop->logId, " before while at greet_barber");
-
-   //! BUG (21 Jan 23h)
-   // the idea of the following code is, until the client does NOT have a barber
-   // associated this function will wait
-
-   // for some reason when this function is called, receive_and_greet_client hasn't
-   // been called yet so this while is an infinite loop.
-   // receive_and_greet_client should be called so we have a pair
-   // clientID -> barberID in the map clients_to_barbers_assocs
-   // for some reason it seems it's not beeing called (should be barber's fault)
-   // I know the function is being called or not thanks to the log receive_and_greet_client
-
-   // see https://www.geeksforgeeks.org/map-associative-containers-the-c-standard-template-library-stl/
-   // for how-to-use maps
-
-   // see related functions receive_and_greet_client (just before this one)
-   // and wait_for_client in barber
-
-   // also please verify the functions associated with the semaphores
-
-   while (clients_to_barbers_assocs.find(clientID) == clients_to_barbers_assocs.end());   
-   send_log(shop->logId, " after while");
-
-   res = clients_to_barbers_assocs.at(clientID);
-   send_log(shop->logId, " after at");
-   clients_to_barbers_assocs.erase(clientID);
-
-   unlock(greet_semaphore);
+   // !Critical zone
+   // !Possible bug
+   send_log(shop->logId, "before get_barber_id at greet_barber");
+   int res = aux_get_barberID(clientID);
+   send_log(shop->logId, "after get_barber_id at at greet_barber");
 
    ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
+
    return res;
 }
 
@@ -464,7 +530,7 @@ void close_shop(BarberShop* shop)
    require (shop_opened(shop), "barber shop already closed");
  
    shop->opened = 0;
-   destroy_semaphore(greet_semaphore);
+   aux_destroy();
 }
 
 static char* to_string_barber_shop(BarberShop* shop)
