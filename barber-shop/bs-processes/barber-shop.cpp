@@ -35,6 +35,8 @@ typedef struct _AuxiliarStructure_
    int clientIDs[MAX_CLIENTS];      // clientID -> barberID
 
    // others might be needed
+   ClientBenches client_benches;
+
 } AuxiliarStructure;
 
 static AuxiliarStructure *aux = NULL;
@@ -119,6 +121,7 @@ void aux_set_clientID(int barberID, int clientID)
 
    aux -> clientIDs[clientID - 1] = barberID;
 
+   ensure(aux->clientIDs[clientID - 1] == barberID, "internal error on set_clientID");
    unlock();
 }
 
@@ -127,9 +130,7 @@ int aux_get_barberID(int clientID)
 {
    require(clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   require (1 == 0, "BEFORE LOCK");
    lock();
-   require(1 == 0, "AFTER LOCK");
 
    int res = -1;
    for (int a = 0; a < MAX_BARBERS; a++)
@@ -161,6 +162,24 @@ int aux_get_clientID(int barberID)
 
    ensure(res > -1, "invalid client id for barber");
    return res;
+}
+
+void aux_get_client_benches(ClientBenches *clientBenches)
+{
+   lock();
+
+   *clientBenches = aux -> client_benches;
+
+   unlock();
+}
+
+void aux_set_client_benches(ClientBenches clientBenches)
+{
+   lock();
+
+   aux -> client_benches = clientBenches;
+
+   unlock();
 }
 
 // -------------------------------------------------

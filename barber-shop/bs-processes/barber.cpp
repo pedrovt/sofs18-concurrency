@@ -199,7 +199,10 @@ static void wait_for_client(Barber* barber)
    // WHILE IS NEEDED & HAS BUG
 
    // 2: get next client from client benches (if empty, wait)
-   while (empty_client_queue(&barber->shop->clientBenches.queue));   //! <- where i suspect the bug is
+   ClientBenches* benches;
+   aux_get_client_benches(benches);
+   while (empty_client_queue(&(benches->queue)))
+      ; //! <- where i suspect the bug is
 
    // but never reaches this
    send_log(barber->logId, "AFTER WHILE");
