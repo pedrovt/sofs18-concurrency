@@ -11,7 +11,7 @@ TARGETS_OBJS=simulation.o
 
 TARGETS := $(TARGETS_OBJS:.o=)
 
-CPPFLAGS=-static -Wall -ggdb -pthread -I.. -Iinclude -Llib      # if necessary add/remove options
+CPPFLAGS=-static -Wall -std=c++11 -ggdb -pthread -I.. -Iinclude -Llib      # if necessary add/remove options
 #CPPFLAGS=-Wall -ggdb -rdynamic -pthread -I.. -Iinclude -Llib    # if necessary add/remove options
 SYMBOLS=-DEXIT_POLICY            # -DEXCEPTION_POLICY or -DEXIT_POLICY; for ascii output: -DASCII_MODE
 LDFLAGS=-lrt -lsoconcur

@@ -57,9 +57,21 @@ static void rise_from_barber_bench(Barber* barber);
 static void process_resquests_from_client(Barber* barber);
 static void release_client(Barber* barber);
 static void done(Barber* barber);
+
 static void process_haircut_request(Barber* barber);
+static void process_shave_request(Barber* barber);
+static void process_hairwash_request(Barber* barber);
 
 static char* to_string_barber(Barber* barber);
+
+static int id = random_int(1, 10000);
+static int create_semaphore(){
+   int semid = psemget(id, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   id = id + 1;
+   psem_up(semid, 0);
+   return semid;
+}
+int accessrc = create_semaphore();          // controlo de acesso a regiões críticas
 
 size_t sizeof_barber()
 {
@@ -135,11 +147,11 @@ static void life(Barber* barber)
    {
       rise_from_barber_bench(barber);
       process_resquests_from_client(barber);
-      // TODO uncomment for next milestone
       release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber); 
    }
+   psemctl(accessrc, 0, IPC_RMID, NULL);
    done(barber);
 }
 
@@ -151,7 +163,7 @@ static void sit_in_barber_bench(Barber* barber)
 
    // !Critical zone: 2 barbers trying to seat in the same bench
 
-   // TODO semaphore to lock
+   psem_down(accessrc, 0);
    
    require (barber != NULL, "barber argument required");
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
@@ -161,10 +173,12 @@ static void sit_in_barber_bench(Barber* barber)
 
    ensure ((barber -> benchPosition) >= 0, "invalid barber bench position");
    
-   // TODO semaphore to unlock
+   psem_up(accessrc, 0);
    log_barber(barber);
 }
 
+// TODO
+//! BUGS
 static void wait_for_client(Barber* barber)
 {
    /** TODO:
@@ -174,38 +188,52 @@ static void wait_for_client(Barber* barber)
     **/
    
    // !Critical zone: 2 barbers trying to access the clients queue
+   psem_down(accessrc, 0);
 
-   // TODO semaphore to lock
    require (barber != NULL, "barber argument required");
 
+   send_log(barber->logId, " WAIT FOR CLIENT");
    barber -> state = WAITING_CLIENTS;
-   while (no_more_clients(client_benches(barber -> shop))) {
-      // wait
-   }
 
-   RQItem client = next_client_in_benches(client_benches(barber -> shop));
+   // i know the barber goes this far
+
+   // !BUG
+   // WHILE IS NEEDED & HAS BUG
+
+   // 2: get next client from client benches (if empty, wait)
+   ClientBenches* benches;
+   aux_get_client_benches(benches);
+   while (empty_client_queue(&(benches->queue))); //! <- where i suspect the bug is
+
+   // but never reaches this
+   send_log(barber->logId, "AFTER WHILE");
+   RQItem client = next_client_in_benches(client_benches(barber->shop));
+
+   send_log(barber->logId, "AFTER CLIENT");
+   barber -> clientID = client.clientID;
+   barber -> reqToDo = client.request;
+
+   send_log(barber->logId, concat_3str("CLIENT IS (", int2str(client.clientID), ")"));
    receive_and_greet_client(barber -> shop, barber -> id, client.clientID);
 
-   //receive_and_greet_client
    log_barber(barber); // (if necessary) more than one in proper places!!!
-   
-   // TODO semaphore to lock
+
+   psem_up(accessrc, 0);
 }
 
-// TODO
+// TODO after bug
 static int work_available(Barber* barber)
 {
    /** TODO:
     * 1: find a safe way to solve the problem of barber termination
     **/
-
+   // if clientqueue is empty: done(barber)?
    require (barber != NULL, "barber argument required");
 
    return 1;
 }
 
-static void rise_from_barber_bench(Barber* barber)
-{
+static void rise_from_barber_bench(Barber* barber){
    /** TODO:
     * 1: rise from the seat of barber bench
     **/
@@ -221,7 +249,7 @@ static void rise_from_barber_bench(Barber* barber)
    log_barber(barber);
 }
 
-// TODO Milestone 1/2
+// TODO after bug
 static void process_resquests_from_client(Barber* barber)
 {
    /** TODO:
@@ -253,7 +281,7 @@ static void process_resquests_from_client(Barber* barber)
    {
       int request = requests[i];
 
-          // if it's actually a request from the client
+      // if it's actually a request from the client
       if ((barber->reqToDo & request) != 0)
       {
          Service service;
@@ -265,12 +293,12 @@ static void process_resquests_from_client(Barber* barber)
             barber -> state = WAITING_WASHBASIN;
             log_barber(barber); //confirm if it's the best place 
 
-            // TODO lock with semaphore
+            psem_down(accessrc, 0);
             while (num_available_washbasin(barber -> shop) <= 0) {
                // TODO wait if there's no available washbasins
             }
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
-            // TODO unlock semaphore
+            psem_up(accessrc, 0);
 
             barber->basinPosition = basinPosition;
             set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
@@ -281,13 +309,12 @@ static void process_resquests_from_client(Barber* barber)
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber); //confirm if it's the best place
 
-            // TODO lock with semaphore
-            while (num_available_barber_chairs(barber->shop) <= 0)
-            {
+            psem_down(accessrc, 0);
+            while (num_available_barber_chairs(barber->shop) <= 0){
                // TODO wait if there's no available barber chairs
             }
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-            // TODO unlock semaphore
+            psem_up(accessrc, 0);
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -295,40 +322,83 @@ static void process_resquests_from_client(Barber* barber)
 
          // inform client on the service to be performed
          inform_client_on_service(barber->shop, service);
-
+         
          // grab the necessary tools from the pot
-         // (if needed)
-         if (request == SHAVE_REQ)           // shave requires a razor
-         {
-            // todo
-            //maybe a function doing the following
-            // !CRITICAL ZONE: several barbers trying to pick up a tool
-            // lock
-            //barber -> state = REQ_X;
-            //while (no_available_X) wait
-            //pick_X() [given function]
-            //update barber -> tools 
-            // unlock
+         if(request == HAIRCUT_REQ) {      // haircut requires scissor & comb
+            // pick scissor
+            barber -> state = REQ_SCISSOR;
+            log_barber(barber);
+            psem_down(accessrc, 0);
+            while(barber->shop->toolsPot.availScissors <= 0){
+               // TODO wait if there's no available scissors
+            }
+            pick_scissor(&barber->shop->toolsPot);
+            barber->tools = barber->tools | SCISSOR_TOOL;
+            psem_up(accessrc, 0);
+
+            // pick comb
+            barber -> state = REQ_COMB;
+            log_barber(barber);
+            psem_down(accessrc, 0);
+            while(barber->shop->toolsPot.availCombs <= 0){
+               // TODO wait if there's no available combs
+            }
+            pick_comb(&barber->shop->toolsPot);
+            barber->tools = barber->tools | COMB_TOOL;
+            psem_up(accessrc, 0);
          }
-         else if (request == HAIRCUT_REQ)    // haircut requires scissor & comb
-         {
-            // same function for SCISSOR and COMB
+         else if(request == SHAVE_REQ) {     // shave requires a razor
+            // pick razor
+            barber -> state = REQ_RAZOR;
+            log_barber(barber);
+            psem_down(accessrc, 0);
+            while(barber->shop->toolsPot.availRazors <= 0){
+               // TODO wait if there's no available razors
+            }
+            pick_razor(&barber->shop->toolsPot);
+            barber->tools = barber->tools | RAZOR_TOOL;
+            psem_up(accessrc, 0);
          }
 
-         // todo wait until client is in place
-         // todo set tools @ barber chair, if needed
-
-         // todo process the service
-         if (request == WASH_HAIR_REQ)
-            break;
-            //process_hairwash_request(barber);
-         /*else if (request == SHAVE_REQ)
+         // process requests
+         if (request == SHAVE_REQ)   {
             process_shave_request(barber);
-         else if (request == HAIRCUT_REQ)
+         }
+         else if (request == HAIRCUT_REQ) {
             process_haircut_request(barber);
-         */
+         }
+         else if (request == WASH_HAIR_REQ)
+            process_hairwash_request(barber);
+         
+         // return the used tools to the pot (if any)
+         if (request == HAIRCUT_REQ) {
+            // drop scissor
+            psem_down(accessrc, 0);
+            return_scissor(&barber -> shop -> toolsPot);
+            barber -> tools = barber -> tools & !SCISSOR_TOOL;
+            log_barber(barber);
 
-         // todo return the used tools to the pot (if any)
+            // drop comb
+            return_comb(&barber -> shop -> toolsPot);
+            barber -> tools = barber -> tools & !COMB_TOOL;
+            psem_up(accessrc, 0);
+            log_barber(barber);
+         }
+         else if (request == SHAVE_REQ){
+            // drop razor
+            psem_down(accessrc, 0);
+            return_razor(&barber -> shop -> toolsPot);
+            barber -> tools = barber -> tools & !RAZOR_TOOL;
+            psem_up(accessrc, 0);
+            log_barber(barber);
+         }
+         if (is_barber_chair_service(&service)){
+            release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+         }
+         else{
+            release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+         }
+         log_barber(barber);
       }
    }
    
@@ -340,6 +410,7 @@ static void process_resquests_from_client(Barber* barber)
    ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
+// TODO after bug
 static void release_client(Barber* barber)
 {
    /** TODO:
@@ -367,7 +438,7 @@ static void done(Barber* barber)
    log_barber(barber);
 }
 
-// TODO Milestone 2
+// TODO after bug
 static void process_haircut_request(Barber* barber)
 {
    /** TODO:
@@ -382,6 +453,48 @@ static void process_haircut_request(Barber* barber)
    int complete = 0;
    while(complete < 100)
    {
+      spend(slice);
+      complete += 100/steps;
+      if (complete > 100)
+         complete = 100;
+      set_completion_barber_chair(barber_chair(barber->shop, barber->chairPosition), complete);
+   }
+
+   log_barber(barber);  // (if necessary) more than one in proper places!!!
+}
+
+// TODO after bug
+static void process_hairwash_request(Barber* barber){
+   /** TODO:
+    * ([incomplete] example code for task completion algorithm)
+    **/
+   require (barber != NULL, "barber argument required");
+
+   int steps = random_int(5,20);
+   int slice = (global->MAX_WORK_TIME_UNITS-global->MIN_WORK_TIME_UNITS+steps)/steps;
+   int complete = 0;
+   while(complete < 100){
+      spend(slice);
+      complete += 100/steps;
+      if (complete > 100)
+         complete = 100;
+      set_completion_washbasin(washbasin(barber->shop, barber->basinPosition), complete);
+   }
+   log_barber(barber);  // (if necessary) more than one in proper places!!!
+}
+
+// TODO after bug
+static void process_shave_request(Barber* barber){
+   /** TODO:
+    * ([incomplete] example code for task completion algorithm)
+    **/
+   require (barber != NULL, "barber argument required");
+   require (barber->tools & RAZOR_TOOL, "barber not holding a razor");
+
+   int steps = random_int(5,20);
+   int slice = (global->MAX_WORK_TIME_UNITS-global->MIN_WORK_TIME_UNITS+steps)/steps;
+   int complete = 0;
+   while(complete < 100){
       spend(slice);
       complete += 100/steps;
       if (complete > 100)
@@ -416,4 +529,3 @@ static char* to_string_barber(Barber* barber)
          barber->clientID > 0 ? int2nstr(barber->clientID, 2) : "--",
          tools, stateText[barber->state], pos);
 }
-

@@ -138,7 +138,9 @@ static void life(Client* client)
       if (vacancy_in_barber_shop(client))
       {
          select_requests(client);
+         send_log(client->logId, " WAITING FOR ITS TURN");
          wait_its_turn(client);
+         send_log(client->logId, " DONE WAITING FOR ITS TURN");
          rise_from_client_benches(client);
          wait_all_services_done(client);
          i++;
@@ -155,8 +157,8 @@ static void notify_client_birth(Client* client)
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
    
-   //enter_barber_shop(client -> shop, client -> id, client -> requests);
-   log_client(client);
+   if (client->state == NONE)
+      log_client(client);
 }
 
 static void notify_client_death(Client* client)
@@ -167,8 +169,8 @@ static void notify_client_death(Client* client)
 
    require (client != NULL, "client argument required");
 
-   leave_barber_shop(client -> shop, client -> id);
-   log_client(client);
+   if (client->state == NONE)
+      log_client(client);
 }
 
 static void wandering_outside(Client* client)
@@ -185,6 +187,7 @@ static void wandering_outside(Client* client)
    log_client(client);
 }
 
+// TODO confirm
 static int vacancy_in_barber_shop(Client* client)
 {
    /** TODO:
@@ -210,6 +213,7 @@ static int vacancy_in_barber_shop(Client* client)
    return res;
 }
 
+// TODO after bug
 static void select_requests(Client* client)
 {
    /** TODO:
@@ -220,28 +224,39 @@ static void select_requests(Client* client)
    require (client != NULL, "client argument required");
 
    client -> state = SELECTING_REQUESTS;
+   log_client(client);
 
    // Requests are a value from 1 to 7 (3 bits <=> 3 services)
    // TODO refactor
    
-   if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
+   // remove comments after first milestone
+   /*if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
    {
-      client -> requests = client -> requests | HAIRCUT_REQ;
+      client -> requests = (client -> requests) | HAIRCUT_REQ;
    }
    if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
    {
-      client -> requests = client -> requests | WASH_HAIR_REQ;
+      client -> requests = (client -> requests) | WASH_HAIR_REQ;
    }
    if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
    {
-      client -> requests = client -> requests | SHAVE_REQ;
+      client -> requests = (client -> requests) | SHAVE_REQ;
    }
+   */
 
-   check (((client -> requests )>= 1 && (client -> requests) <= 7), "invalid client requests");
+   // TODO fix this (no request is selected)
+   if (client -> requests == 0) {
+      //select_requests(client);
+      client -> requests = WASH_HAIR_REQ;
+   }
+   
+   check(((client->requests) >= 1 && (client->requests) <= 7), concat_2str("invalid client request ", int2str(client->requests)));
    
    log_client(client);
 }
 
+// TODO 
+// !BUG
 static void wait_its_turn(Client* client)
 {
    /** TODO:
@@ -252,17 +267,25 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
+   // 1: set the client state to WAITING_ITS_TURN
    client -> state = WAITING_ITS_TURN;
 
+   // 2: enter barbershop (if necessary waiting for an empty seat)
    // function returns its position in the clients' benches
-   client -> benchesPosition = enter_barber_shop(client -> shop, client -> id, client -> requests); 
+   send_log(client->logId, " going to enter barber shop at wait_its_turn");
+   client -> benchesPosition = enter_barber_shop(client -> shop, client -> id, client -> requests);
+
+   send_log(client->logId, " entered barber shop at wait_its_turn");
 
    // function returns its barber's ID
    client -> barberID = greet_barber(client -> shop, client -> id);
+   send_log(client->logId, " greeted barber at wait_its_turn");
 
+   ensure((client->barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
    log_client(client);
 }
 
+// TODO finish
 static void rise_from_client_benches(Client* client)
 {
    /** TODO:
@@ -273,7 +296,6 @@ static void rise_from_client_benches(Client* client)
    // TODO Semaphore lock
 
    require (client != NULL, "client argument required");
-   require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
    
    rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
@@ -283,6 +305,7 @@ static void rise_from_client_benches(Client* client)
    // TODO Semaphore unlock
 }
 
+// TODO after bug
 static void wait_all_services_done(Client* client)
 {
    /** TODO:
@@ -301,23 +324,37 @@ static void wait_all_services_done(Client* client)
    require (client != NULL, "client argument required");
    
    // TODO for
-   //for () {
+   while(client->requests != 0){
       client -> state = WAITING_SERVICE;
+      log_client(client);
       Service service = wait_service_from_barber(client -> shop, client -> barberID);
-      
+
       client -> state = WAITING_SERVICE_START;
+      log_client(client);
 
       // define destination
       if (is_washbasin_service(&service)) {     // washbasin (hair wash)
          sit_in_washbasin(&(client -> shop -> washbasin[service_position(&service)]), client -> id);
          client -> state = HAVING_A_HAIR_WASH;
+         log_client(client);
+         // wait to finish
+         while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
+            ;
+         rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
       }
       else {                                    // chair (haircut, chair)
          sit_in_barber_chair(&(client -> shop -> barberChair[service_position(&service)]), client->id);
          client->state = service.request == HAIRCUT_REQ ? HAVING_A_HAIRCUT : HAVING_A_SHAVE;
+         log_client(client);
+         // wait to finish
+         while(!barber_chair_service_finished(barber_chair(client->shop, service_position(&service))))
+            ;
+         rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);
       }
-   //}
-
+      client -> state = DONE;
+      log_client(client);
+      client -> requests -= service_request(&service);
+   }
    leave_barber_shop(client -> shop, client -> id);
    log_client(client); // more than one in proper places!!!
 }

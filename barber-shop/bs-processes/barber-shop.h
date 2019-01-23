@@ -81,4 +81,5 @@ int greet_barber(BarberShop* shop, int clientID); // returns barberID
 int shop_opened(BarberShop* shop);
 void close_shop(BarberShop* shop); // no more outside clients accepted
 
+void aux_get_client_benches(ClientBenches *clientBenches);
 #endif
