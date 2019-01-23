@@ -139,17 +139,18 @@ static void life(Client* client)
       if (vacancy_in_barber_shop(client))
       {
          // Pequena alteracao, so entra na loja se escolheu algum pedido
-         // Visto que á percentagem para cada request, pode nao escolher nada
+         // Visto que há percentagem para cada request, pode nao escolher nada
          if(select_requests(client) != 0) {
             wait_its_turn(client);
             rise_from_client_benches(client);
             wait_all_services_done(client);
-            spend(100000);
+            client->shop->trips--;
+            printf("Client %d went %d times\n", client->id, i+1);
+            printf("Current missing trips to close: %d", client->shop->trips);
          }
+//         client->shop->services--;
          i++;
-         pthread_mutex_lock(&client->shop->servicesCR);
-         client->shop->services--;
-         pthread_mutex_unlock(&client->shop->servicesCR);
+//         printf("Client %d went %d times", client->id, i);
       }
    }
    client->state = DONE;
@@ -164,9 +165,9 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
-   pthread_mutex_lock(&client->shop->servicesCR);
-   client->shop->services += client->num_trips_to_barber;
-   pthread_mutex_unlock(&client->shop->servicesCR);
+   pthread_mutex_lock(&client->shop->tripsCR);
+   client->shop->trips += client->num_trips_to_barber;
+   pthread_mutex_unlock(&client->shop->tripsCR);
 
    log_client(client);
 }
@@ -342,6 +343,7 @@ static void wait_all_services_done(Client* client)
       client->requests -= service_request(&service);
    }
    client->state = DONE;
+   leave_barber_shop(client->shop, client->id);
    log_client(client);
 }
 

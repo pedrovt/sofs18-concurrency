@@ -166,9 +166,7 @@ static void sit_in_barber_bench(Barber* barber)
 
 }
 
-static void wait_for_client(Barber* barber)//rise_from_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->clientID);
-   //release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
-   
+static void wait_for_client(Barber* barber)
 {
    /** TODO:
     * 1: set the client state to WAITING_CLIENTS
@@ -209,8 +207,8 @@ static int work_available(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
-   printf("Work: %d\n", barber->shop->services);
-   if (barber->shop->services == 0) return 0;
+   //printf("Work: %d\n", barber->shop->services);
+   if (barber->shop->trips == 1) return 0;
    return 1;
 }
 
