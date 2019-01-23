@@ -15,7 +15,6 @@ typedef struct _Service_
    int clientID;
    int pos;
    int request;
-   int empty;
    int used;
 } Service;
 
