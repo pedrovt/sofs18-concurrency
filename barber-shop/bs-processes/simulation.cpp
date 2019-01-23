@@ -26,6 +26,7 @@ static Barber* allBarbers = NULL;
 static Client* allClients = NULL;
 static int logIdBarbersDesc;
 static int logIdClientsDesc;
+
 /* internal functions */
 static void help(char* prog, Parameters *params);
 static void processArgs(Parameters *params, int argc, char* argv[]);
@@ -34,6 +35,12 @@ static void go();
 static void finish();
 static void initSimulation();
 
+/* our fields */
+static pid_t allBarbersIds[MAX_BARBERS];
+static pid_t allClientsIds[MAX_CLIENTS];
+
+
+/* given functions */
 int main(int argc, char* argv[])
 {
    // default parameter values:
@@ -66,9 +73,6 @@ int main(int argc, char* argv[])
    return 0;
 }
 
-pid_t allBarbersIds[MAX_BARBERS];
-pid_t allClientsIds[MAX_CLIENTS];
-
 /**
  * launch threads/processes for barbers and clients
  */
@@ -86,19 +90,19 @@ static void go()
    send_log(logIdClientsDesc, (char*)descText);
    show_barber_shop(shop);
 
+   //? See
+   /* create the shared data structure (barbershop) */
+   shop_create(shop);
 
-
-   for (int i = 0; i < global->NUM_BARBERS; i++)
+   /* create the clients and barbers processes */
+   for (int i = 0; i < global -> NUM_BARBERS; i++) 
+   {
       log_barber(allBarbers + i);
-   for (int i = 0; i < global->NUM_CLIENTS; i++)
-      log_client(allClients + i);
-
-   for(int i = 0; i < global->NUM_BARBERS; i++) 
-   {      
       // Launch Barbers
       // Routine to run is main_barber()     
       Barber* barber = &allBarbers[i];
       check(barber != NULL, "barber to associate with process can't be null");
+      
       pid_t id = pfork();
       allBarbersIds[i] = id;
 
@@ -110,17 +114,16 @@ static void go()
       //log_barber(allBarbers+i);
    }
 
-   for(int i = 0; i < global->NUM_CLIENTS; i++) 
+   for (int i = 0; i < global -> NUM_CLIENTS; i++) 
    {
+      log_client(allClients + i);
       // Launch Clients
       // Routine to run is main_client()
-      //! Just 1 process for all clients?
-
-      Client* client = &allClients[0];
+      Client* client = &allClients[i];
       check(client != NULL, "client to associate with process can't be null");
       
       pid_t id = pfork();
-      allClientsIds[0] = id;
+      allClientsIds[i] = id;
       
       // Child side: run Routine
       if (id == 0) { 
@@ -155,6 +158,7 @@ static void finish()
       // printf("Process %d returned\n", allClientsIds[i]);
    }
 
+   //shop_destroy(shop);
    term_logger();
 }
 
@@ -170,7 +174,7 @@ static void initSimulation()
    init_barber_shop(shop, global->NUM_BARBERS, global->NUM_BARBER_CHAIRS,
                     global->NUM_SCISSORS, global->NUM_COMBS, global->NUM_RAZORS, global->NUM_WASHBASINS,
                     global->NUM_CLIENT_BENCHES_SEATS, global->NUM_CLIENT_BENCHES);
-
+   
    char* descText;
    descText = (char*)"Barbers:";
    char* translationsBarbers[] = {

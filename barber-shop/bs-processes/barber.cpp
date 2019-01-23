@@ -188,37 +188,27 @@ static void wait_for_client(Barber* barber)
     **/
    
    // !Critical zone: 2 barbers trying to access the clients queue
-   psem_down(accessrc, 0);
-
    require (barber != NULL, "barber argument required");
 
-   send_log(barber->logId, " WAIT FOR CLIENT");
+   send_log(barber->logId, "wait_for_client");
    barber -> state = WAITING_CLIENTS;
-
-   // i know the barber goes this far
-
-   // !BUG
-   // WHILE IS NEEDED & HAS BUG
 
    // 2: get next client from client benches (if empty, wait)
    ClientBenches* benches;
-   aux_get_client_benches(benches);
-   while (empty_client_queue(&(benches->queue))); //! <- where i suspect the bug is
+   while (empty_client_queue(&(benches->queue)));     //! <- where i suspect the bug is
 
    // but never reaches this
-   send_log(barber->logId, "AFTER WHILE");
+   send_log(barber -> logId, "before next_client_in_benches");
    RQItem client = next_client_in_benches(client_benches(barber->shop));
 
-   send_log(barber->logId, "AFTER CLIENT");
-   barber -> clientID = client.clientID;
-   barber -> reqToDo = client.request;
+   send_log(barber -> logId, "after next next_client_in_benches");
+   barber -> clientID   = client.clientID;
+   barber -> reqToDo    = client.request;
 
-   send_log(barber->logId, concat_3str("CLIENT IS (", int2str(client.clientID), ")"));
+   send_log(barber -> logId, concat_3str("CLIENT IS (", int2str(client.clientID), ")"));
    receive_and_greet_client(barber -> shop, barber -> id, client.clientID);
 
    log_barber(barber); // (if necessary) more than one in proper places!!!
-
-   psem_up(accessrc, 0);
 }
 
 // TODO after bug
