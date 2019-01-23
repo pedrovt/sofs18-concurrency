@@ -147,6 +147,9 @@ static void life(Client* client)
             spend(100000);
          }
          i++;
+         pthread_mutex_lock(&client->shop->servicesCR);
+         client->shop->services--;
+         pthread_mutex_unlock(&client->shop->servicesCR);
       }
    }
    client->state = DONE;
@@ -161,6 +164,9 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
+   pthread_mutex_lock(&client->shop->servicesCR);
+   client->shop->services += client->num_trips_to_barber;
+   pthread_mutex_unlock(&client->shop->servicesCR);
 
    log_client(client);
 }

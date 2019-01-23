@@ -88,6 +88,7 @@ void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
    for(int i = 0; i < MAX_CLIENTS; i++)
       shop->clientsInside[i] = 0;
    shop->opened = 1;
+   shop->services = 0;
 
    gen_rect(skel, skel_length, num_lines_barber_shop(shop), num_columns_barber_shop(shop), 0xF, 1);
    gen_overlap_boxes(skel, 0, skel,
@@ -331,7 +332,6 @@ void client_done(BarberShop* shop, int clientID)
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
-
 }
 
 int enter_barber_shop(BarberShop* shop, int clientID, int request)

@@ -137,7 +137,6 @@ static void life(Barber* barber)
    {
       rise_from_barber_bench(barber);
       process_resquests_from_client(barber);
-      spend(10000000);
       release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber);
@@ -167,7 +166,9 @@ static void sit_in_barber_bench(Barber* barber)
 
 }
 
-static void wait_for_client(Barber* barber)
+static void wait_for_client(Barber* barber)//rise_from_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->clientID);
+   //release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+   
 {
    /** TODO:
     * 1: set the client state to WAITING_CLIENTS
@@ -208,6 +209,8 @@ static int work_available(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   printf("Work: %d\n", barber->shop->services);
+   if (barber->shop->services == 0) return 0;
    return 1;
 }
 
@@ -272,7 +275,6 @@ static void drop_tools(Barber * barber, int request)
 
 static void pickup_tool(Barber* barber, const char *tool)
 {
-
    if(strcmp(tool, "scissor") == 0) {
       barber->state = REQ_SCISSOR;
       log_barber(barber);
@@ -301,19 +303,16 @@ static void pickup_tool(Barber* barber, const char *tool)
       pthread_mutex_unlock(&barber->shop->razorCR);
       barber->tools = barber->tools | RAZOR_TOOL;
    }
-
 }
 
 static void pickup_tools(Barber* barber, int request) 
 {
-
    if(request == HAIRCUT_REQ) {
       pickup_tool(barber, "scissor");
       pickup_tool(barber, "comb");
    } else if(request == SHAVE_REQ) {
       pickup_tool(barber, "razor");
    }
-
 }
 
 static void process_resquests_from_client(Barber* barber)
@@ -396,8 +395,7 @@ static void process_resquests_from_client(Barber* barber)
             process_shave_request(barber);
 
          drop_tools(barber, services[i]);
-
-         pthread_cond_wait(&greetCD, &greetCR);
+         log_barber(barber);
       }
    }
 }
@@ -409,8 +407,19 @@ static void release_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
-   rise_from_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->clientID);
-   release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+   if (barber->basinPosition == -1)
+   {
+      while(barber_chair_with_a_client(barber_chair(barber->shop, barber->chairPosition)));
+      release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+      barber->chairPosition = -1;
+   }
+   else if (barber-> basinPosition != -1)
+   {
+      while(washbasin_with_a_client(washbasin(barber->shop, barber->basinPosition)));
+      release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+      barber->basinPosition = -1;
+   }
+   barber->clientID = -1;
    log_barber(barber);
 }
 
@@ -421,6 +430,7 @@ static void done(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
 
+   client_done(barber->shop, barber->clientID);
    barber->state = DONE;
 
    log_barber(barber);
