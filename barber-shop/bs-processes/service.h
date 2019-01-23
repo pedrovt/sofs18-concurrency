@@ -15,6 +15,8 @@ typedef struct _Service_
    int clientID;
    int pos;
    int request;
+   int empty;
+   int used;
 } Service;
 
 void set_barber_chair_service(Service* service, int barber_id, int client_id, int pos, int request);
@@ -25,6 +27,8 @@ int service_barber_id(Service* service);
 int service_client_id(Service* service);
 int service_position(Service* service);
 int service_request(Service* service);
+void used_service(Service* service, int used);
+int service_used(Service* service);
 
 
 #endif

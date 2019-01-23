@@ -16,6 +16,7 @@ void set_barber_chair_service(Service* service, int barber_id, int client_id, in
    service->clientID = client_id;
    service->pos = pos;
    service->request = request;
+   service->used = 0;
 }
 
 void set_washbasin_service(Service* service, int barber_id, int client_id, int pos)
@@ -31,6 +32,7 @@ void set_washbasin_service(Service* service, int barber_id, int client_id, int p
    service->clientID = client_id;
    service->pos = pos;
    service->request = WASH_HAIR_REQ;
+   service->used = 0;
 }
 
 int is_barber_chair_service(Service* service)
@@ -73,5 +75,15 @@ int service_request(Service* service)
    require (service != NULL, "service argument required");
 
    return service->request;
+}
+
+void used_service(Service* service, int used){
+	service->used = used;
+}
+
+int service_used(Service* service){
+   require (service != NULL, "service argument required");
+
+   return service->used;
 }
 

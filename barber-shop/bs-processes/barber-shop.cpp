@@ -22,6 +22,7 @@ static char skel[skel_length];
 
 static int barberIDs[MAX_BARBERS];
 static int clientIDs[MAX_CLIENTS];
+Service services[MAX_BARBERS];
 
 
 // #############################################################################
@@ -349,7 +350,13 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   Service res;
+   lock();
+   while(service_used(&services[barberID-1]))
+      ;
+   Service res = services[barberID-1];
+   used_service(&services[barberID-1], 1);
+   unlock();
+
    return res;
 }
 
@@ -359,6 +366,11 @@ void inform_client_on_service(BarberShop* shop, Service service)
    /** TODO:
     * function called from a barber, expecting to inform a client of its next service
     **/
+
+   lock();
+   services[service_barber_id(&service) - 1] = service;
+   used_service(&services[service_barber_id(&service) - 1], 0);
+   unlock();
 
    require (shop != NULL, "shop argument required");
 
