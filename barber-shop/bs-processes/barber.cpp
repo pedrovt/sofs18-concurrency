@@ -200,7 +200,7 @@ static void wait_for_client(Barber* barber)
       send_log(barber->logId, concat_2str("[wait_for_client] clients inside: ", int2str(barber->shop->numClientsInside)));
       send_log(barber->logId, (char*)"[wait_for_client] Going to lock");
       
-      lock(barber->shop->mxt_numActiveClients); 
+      lock(get_mxt_numActiveClients()); 
       send_log(barber->logId, (char*)"[wait_for_client] After lock");
 
       while (barber -> shop -> numActiveClients) {};
@@ -214,7 +214,7 @@ static void wait_for_client(Barber* barber)
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
 
-      unlock(barber->shop->mxt_numActiveClients);
+      unlock(get_mxt_numActiveClients());
       send_log(barber->logId, (char*)"[wait_for_client] after unlock");
 
       shop_disconnect(barber->shop);
