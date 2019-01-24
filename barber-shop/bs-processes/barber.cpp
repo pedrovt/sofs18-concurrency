@@ -151,7 +151,7 @@ static void life(Barber* barber)
       sit_in_barber_bench(barber);
       wait_for_client(barber); 
    }
-   psemctl(accessrc, 0, IPC_RMID, NULL);
+   //psemctlpsemctl(accessrc, 0, IPC_RMID, NULL);
    done(barber);
 }
 
@@ -190,25 +190,35 @@ static void wait_for_client(Barber* barber)
    // !Critical zone: 2 barbers trying to access the clients queue
    require (barber != NULL, "barber argument required");
 
-   send_log(barber->logId, "wait_for_client");
+   send_log(barber->logId, "[wait_for_client]");
    barber -> state = WAITING_CLIENTS;
 
-   // 2: get next client from client benches (if empty, wait)
-   ClientBenches* benches;
-   while (empty_client_queue(&(benches->queue)));     //! <- where i suspect the bug is
+   // check for simulation termination
+   if (barber-> shop -> opened) {
+      shop_connect(barber->shop);
+      send_log(barber->logId, concat_2str("[wait_for_client] CLIENTS INSIDE", int2str(barber->shop->numClientsInside)));
+      send_log(barber->logId, "[wait_for_client] Going to lock");
+      lock(barber -> shop ->mtx_clients_benches_id);
+      send_log(barber->logId, "[wait_for_client] After lock");
+      
+      // 2: get next client from client benches (if empty, wait)
+      while (no_more_clients(&(barber->shop->clientBenches)));
+      
+      send_log(barber->logId, "[wait_for_client] working");
+      
+      RQItem client = next_client_in_benches(client_benches(barber->shop));
+      send_log(barber->logId, "[wait_for_client] after next next_client_in_benches");
+      
+      barber->clientID = client.clientID;
+      barber->reqToDo = client.request;
 
-   // but never reaches this
-   send_log(barber -> logId, "before next_client_in_benches");
-   RQItem client = next_client_in_benches(client_benches(barber->shop));
+      unlock(barber->shop->mtx_clients_benches_id);
 
-   send_log(barber -> logId, "after next next_client_in_benches");
-   barber -> clientID   = client.clientID;
-   barber -> reqToDo    = client.request;
-
-   send_log(barber -> logId, concat_3str("CLIENT IS (", int2str(client.clientID), ")"));
-   receive_and_greet_client(barber -> shop, barber -> id, client.clientID);
-
-   log_barber(barber); // (if necessary) more than one in proper places!!!
+      shop_disconnect(barber->shop);
+      
+      send_log(barber->logId, "[wait_for_client] after unlock");
+      receive_and_greet_client(barber->shop, barber->id, client.clientID);
+   }
 }
 
 // TODO after bug
@@ -217,9 +227,11 @@ static int work_available(Barber* barber)
    /** TODO:
     * 1: find a safe way to solve the problem of barber termination
     **/
-   // if clientqueue is empty: done(barber)?
    require (barber != NULL, "barber argument required");
+   // if clientqueue is empty: done(barber)?
 
+         
+   
    return 1;
 }
 

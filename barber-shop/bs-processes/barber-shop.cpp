@@ -22,38 +22,45 @@ static char skel[skel_length];
 
 static int barberIDs[MAX_BARBERS];
 static int clientIDs[MAX_CLIENTS];
-Service services[MAX_BARBERS];
+static Service services[MAX_BARBERS];
 
 
 // #############################################################################
 static long key = 0x3333L; // key for semaphore
-static int shmid = -1;
-static int mtxid = -1; // mutual exclusion semaphore
+static long clients_bench_key = 0x4444L;
+
+int shmid = -1;
+int mtxid = -1; // mutual exclusion semaphore
+int mtx_clients_benches_id = -1;
+
 /* auxiliar functions for semaphores */
-void unlock()
+void unlock(int id)
 {
-   psem_up(mtxid, 0);
+   psem_up(id, 0);
 }
 
-void lock()
+void lock(int id)
 {
-   psem_down(mtxid, 0);
+   struct sembuf down = {0, -1, 0};
+   psemop(id, &down, 1);
 }
 
 /* auxiliar functions for shared memory structure (the barbershop) */
 void shop_create(BarberShop* shop)
 {
    /* create the shared memory */
-   shmid = pshmget(key, sizeof(BarberShop), 0600 | IPC_CREAT | IPC_EXCL);
-
+   shmid = pshmget(IPC_PRIVATE, sizeof(BarberShop), 0600 | IPC_CREAT | IPC_EXCL);
+   
    /* attach shared memory to process addressing space */
-   shop = (BarberShop *)pshmat(shmid, NULL, 0);
+   shop = (BarberShop*) pshmat(shmid, NULL, 0);
 
    /* create access locker */
-   mtxid = semget(key, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   mtx_clients_benches_id = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* unlock shared data structure */
-   unlock();
+   unlock(mtxid);
+   unlock(mtx_clients_benches_id);
 
    ensure (shop != NULL, "shared data structure can't be null");
    /* detach shared memory from process addressing space */
@@ -63,23 +70,18 @@ void shop_create(BarberShop* shop)
 
 void shop_connect(BarberShop* shop)
 {  
-   printf("\nHELLO");
-
-   /* get access to the shared memory */
-   shmid = pshmget(key, sizeof(BarberShop), 0);
-
-   printf("\nCONTINUING");
+   printf("\n[shop_connect] Connecting to %d...", shmid);
 
    /* attach shared memory to process addressing space */
    shop = (BarberShop*) pshmat(shmid, NULL, 0);
 
-   printf("\nBYE");
+   printf("\n[shop_connected] Connected sucessfully");
 }
 
 void shop_disconnect(BarberShop* shop)
 {
-   //pshmdt(shop);
-   //shop = NULL;
+   pshmdt(shop);
+   shop = NULL;
 }
 
 void shop_destroy(BarberShop* shop)
@@ -351,10 +353,10 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
    lock();
-   while(service_used(&services[barberID-1]))
+   while (service_used(&services[barberID - 1]))
       ;
-   Service res = services[barberID-1];
-   used_service(&services[barberID-1], 1);
+   Service res = services[barberID - 1];
+   used_service(&services[barberID - 1], 1);
    unlock();
 
    return res;
@@ -401,12 +403,10 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require (num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
-   lock();   
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop -> clientsInside[shop->numClientsInside++] = clientID;
-   unlock();
 
-   return res;
+  return res;
 }
 
 // ? might need to be called
@@ -449,10 +449,12 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 
    // !Critical area. A client can be trying to greet a barber
    shop_connect(shop);
-   lock();
+   lock(mtxid);
    barberIDs[barberID] = clientID;
    clientIDs[clientID] = barberID;
-   unlock();
+   
+   // TODO up semaphore
+   unlock(mtxid);
    shop_disconnect(shop);
 }
 
@@ -474,9 +476,9 @@ int greet_barber(BarberShop* shop, int clientID)
    shop_connect(shop);
    send_log(shop->logId, "after shop_connect");
 
-   lock();
-   res = clientIDs[clientID - 1]; 
-   unlock();
+   lock(mtxid);
+   res = clientIDs[clientID]; 
+   unlock(mtxid);
    shop_disconnect(shop);
    
    send_log(shop -> logId, "after get_barber_id at at greet_barber");

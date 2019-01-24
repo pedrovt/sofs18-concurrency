@@ -43,6 +43,10 @@ typedef struct _BarberShop_
 
    int logId;
    char* internal;
+
+   int shmid;
+   int mtxid;                       // mutual exclusion semaphore
+   int mtx_clients_benches_id;
 } BarberShop;
 
 int num_lines_barber_shop(BarberShop* shop);
@@ -85,5 +89,7 @@ void shop_create(BarberShop *shop);
 void shop_destroy(BarberShop *shop);
 void shop_connect(BarberShop *shop);
 void shop_disconnect(BarberShop *shop);
+void lock(int id);
+void unlock(int id);
 
 #endif

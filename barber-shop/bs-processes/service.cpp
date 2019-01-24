@@ -86,4 +86,3 @@ int service_used(Service* service){
 
    return service->used;
 }
-

@@ -66,6 +66,8 @@ int main(int argc, char* argv[])
    printf("<press RETURN>");
    getchar();
 
+   shop_create(shop);
+   shop_connect(shop);
    initSimulation();
    go();
    finish();
@@ -92,7 +94,7 @@ static void go()
 
    //? See
    /* create the shared data structure (barbershop) */
-   shop_create(shop);
+   
 
    /* create the clients and barbers processes */
    for (int i = 0; i < global -> NUM_BARBERS; i++) 
@@ -132,6 +134,8 @@ static void go()
 
       //log_client(allClients + i);
    }
+
+   
 }
 
 /**
@@ -141,6 +145,8 @@ static void finish()
 {
    /* TODO: change this function to your needs */
    /* wait for processes to conclude */
+
+   //shop_disconnect(shop);
    int allBarbersStatus[global->NUM_BARBERS];
    int allClientsStatus[global->NUM_CLIENTS];
 
