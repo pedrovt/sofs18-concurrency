@@ -204,10 +204,6 @@ static void wait_for_client(Barber* barber)
       barber->reqToDo = client.request;
       log_barber(barber);  // (if necessary) more than one in proper places!!!
       receive_and_greet_client(barber->shop, barber->id, client.clientID);
-   } else {
-      barber->state = DONE;
-      log_barber(barber);
-      //printf("No more clients!!!\n");  
    }
 }
 
@@ -461,10 +457,9 @@ static void done(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
 
-   client_done(barber->shop, barber->clientID);
+   //client_done(barber->shop, barber->clientID);
    barber->state = DONE;
    barber->clientID = -1;
-   
 
    log_barber(barber);
 }
