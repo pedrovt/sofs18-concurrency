@@ -7,7 +7,6 @@
 #include "logger.h"
 #include "global.h"
 #include "barber-shop.h"
-#include <map>
 
 /* TODO: take a careful look to all the non static (public) functions, to check
  * if a proper synchronization is needed.
@@ -20,18 +19,17 @@ static const int skel_length = 10000;
 static char skel[skel_length];
 
 
-static int barberIDs[MAX_BARBERS];
-static int clientIDs[MAX_CLIENTS];
 static Service services[MAX_BARBERS];
 
 
 // #############################################################################
-//static long key = 0x3333L; // key for semaphore
-//static long clients_bench_key = 0x4444L;
-
+// shared memory segment
 int shmid = -1;
-int mtxid = -1; // mutual exclusion semaphore
-int mtx_clients_benches_id = -1;
+
+// mutual exclusion semaphores
+int mtxid = -1;                       // barbershop
+int mtx_clients_benches_id = -1;      // client benches
+int mxt_numActiveClients   = -1;      // num active clients counter
 
 /* auxiliar functions for semaphores */
 void unlock(int id)
@@ -56,12 +54,15 @@ void shop_create(BarberShop* shop)
    /* create access locker */
    mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    mtx_clients_benches_id = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   mxt_numActiveClients = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* unlock shared data structure */
    unlock(mtxid);
    unlock(mtx_clients_benches_id);
-
+   unlock(mxt_numActiveClients);
+   
    ensure (shop != NULL, "shared data structure can't be null");
+  
    /* detach shared memory from process addressing space */
    //shmdt(shop);
    //shop = NULL;
@@ -79,8 +80,8 @@ void shop_connect(BarberShop* shop)
 
 void shop_disconnect(BarberShop* shop)
 {
-   // pshmdt(shop);
-   // shop = NULL;
+   pshmdt(shop);
+   shop = NULL;
 }
 
 void shop_destroy(BarberShop* shop)
@@ -143,6 +144,9 @@ void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
    for(int i = 0; i < MAX_CLIENTS; i++)
       shop->clientsInside[i] = 0;
    shop->opened = 1;
+
+   /* our info */
+   shop->numActiveClients = global -> NUM_CLIENTS;
 
    gen_rect(skel, skel_length, num_lines_barber_shop(shop), num_columns_barber_shop(shop), 0xF, 1);
    gen_overlap_boxes(skel, 0, skel,
@@ -396,16 +400,20 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
     * Function called from a client when entering the barbershop
     **/
 
+   
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
+   
+   // todo down do semáforo
+
    require (num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
    shop -> clientsInside[shop->numClientsInside++] = clientID;
-
-  return res;
+   
+   return res;
 }
 
 // ? might need to be called
@@ -449,11 +457,10 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    shop_connect(shop);
    
    send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
-   lock(mtxid);
-   barberIDs[barberID] = clientID;
-   clientIDs[clientID] = barberID;
    
-   // TODO up semaphore
+   lock(mtxid);
+   // TODO semaphore
+   shop -> barber_to_client_ids[clientID] = barberID;
    unlock(mtxid);
 
    send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
@@ -477,8 +484,8 @@ int greet_barber(BarberShop* shop, int clientID)
    
    send_log(shop->logId, (char*)"[greet_barber] before lock");
    lock(mtxid);
-   res = clientIDs[clientID]; // should be okay, the problem is in the function above
-   
+   res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
+
    unlock(mtxid);
    send_log(shop->logId, (char*)"[greet_barber] after lock");
    shop_disconnect(shop);

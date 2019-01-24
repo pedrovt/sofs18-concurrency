@@ -99,7 +99,7 @@ int no_more_clients(ClientBenches* benches)
 {
    require (benches != NULL, "benches argument required");
 
-   int res = 1;
+   int res = empty_client_queue(&benches->queue);
    return res;
 }
 
