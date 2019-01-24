@@ -18,18 +18,11 @@
 static const int skel_length = 10000;
 static char skel[skel_length];
 
-
-static Service services[MAX_BARBERS];
-
+static int shmid = -1;
+static Service services[MAX_BARBERS];     // TODO move to barber-shop.h
 
 // #############################################################################
-// shared memory segment
-int shmid = -1;
 
-// mutual exclusion semaphores
-int mtxid = -1;                       // barbershop
-int mtx_clients_benches_id = -1;      // client benches
-int mxt_numActiveClients   = -1;      // num active clients counter
 
 /* auxiliar functions for semaphores */
 void unlock(int id)
@@ -42,6 +35,30 @@ void lock(int id)
    psem_down(id, 0);
 }
 
+void shop_sems_create(BarberShop *shop)
+{
+   /* create access lockers */
+   shop-> mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop-> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+
+   /* create other semaphores */
+   shop->sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop->sem_num_benches_pos = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+
+   /* unlock semaphores*/
+   unlock(shop->mtxid);
+   unlock(shop->mtx_clients_benches);
+   unlock(shop->sem_num_clients_in_benches);
+   for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
+      unlock(shop->sem_num_benches_pos);
+   }
+
+   ensure(shop->mtxid != -1, "mtxid semaphore not right");
+   ensure(shop->mtx_clients_benches != -1, "mtx_clients_benches semaphore not right");
+   ensure(shop->sem_num_clients_in_benches != -1, "sem_num_clients_in_benches semaphore not right");
+   ensure(shop->sem_num_benches_pos != -1, "sem_num_benches_pos semaphore not right");
+}
+
 /* auxiliar functions for shared memory structure (the barbershop) */
 void shop_create(BarberShop* shop)
 {
@@ -50,18 +67,7 @@ void shop_create(BarberShop* shop)
    
    /* attach shared memory to process addressing space */
    shop = (BarberShop*) pshmat(shmid, NULL, 0);
-
-   /* create access locker */
-   mtxid                  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   mtx_clients_benches_id = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   mxt_numActiveClients   = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-
-   /* unlock semaphores*/
-   unlock(mtxid);
-   unlock(mtx_clients_benches_id);
-   unlock(mxt_numActiveClients);
-   
-   ensure (shop != NULL, "shared data structure can't be null");
+   ensure(shop != NULL, "shared data structure can't be null");
 }
 
 void shop_connect(BarberShop* shop)
@@ -82,16 +88,25 @@ void shop_disconnect(BarberShop* shop)
 
 void shop_destroy(BarberShop* shop)
 {
-   /* destroy the locker semaphore */
-   //psemctl(mtxid, 0, IPC_RMID, NULL);
+   /* destroy the semaphorees */
+   /*
+   psemctl(mtxid, 0, IPC_RMID, NULL);
+   psemctl(mtx_clients_benches, 0, IPC_RMID, NULL);
+   psemctl(sem_num_clients_in_benches, 0, IPC_RMID, NULL);
+   psemctl(sem_num_benches_pos, 0, IPC_RMID, NULL);
+   */
 
    /* detach shared memory from process addressing space */
-   //pshmdt(shop);
-   //shop = NULL;
+   /*
+   pshmdt(shop);
+   shop = NULL;
+   */
 
    /* ask OS to destroy the shared memory */
-   //pshmctl(shmid, IPC_RMID, NULL);
-   //shmid = -1;
+   /*
+   pshmctl(shmid, IPC_RMID, NULL);
+   shmid = -1; 
+   */
 }
 
 // #############################################################################
@@ -351,12 +366,12 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   lock(mtxid);
+   lock(shop->mtxid);
    while (service_used(&services[barberID - 1]))
       ;
    Service res = services[barberID - 1];
    used_service(&services[barberID - 1], 1);
-   unlock(mtxid);
+   unlock(shop->mtxid);
 
    return res;
 }
@@ -368,10 +383,10 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   lock(mtxid);
+   lock(shop->mtxid);
    services[service_barber_id(&service) - 1] = service;
    used_service(&services[service_barber_id(&service) - 1], 0);
-   unlock(mtxid);
+   unlock(shop->mtxid);
 
    require (shop != NULL, "shop argument required");
 
@@ -400,10 +415,7 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
-
-   // todo down do semáforo with number of positions
-   lock(get_mxt_num_benches_pos());
-
+   
    require(num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
@@ -454,11 +466,11 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    shop_connect(shop);
    
    send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
-   
-   lock(mtxid);
+
+   lock(shop->mtxid);
    // TODO semaphore
    shop -> barber_to_client_ids[clientID] = barberID;
-   unlock(mtxid);
+   unlock(shop->mtxid);
 
    send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
    shop_disconnect(shop);
@@ -480,10 +492,10 @@ int greet_barber(BarberShop* shop, int clientID)
    shop_connect(shop);
    
    send_log(shop->logId, (char*)"[greet_barber] before lock");
-   lock(mtxid);
+   lock(shop->mtxid);
    res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
 
-   unlock(mtxid);
+   unlock(shop->mtxid);
    send_log(shop->logId, (char*)"[greet_barber] after lock");
    shop_disconnect(shop);
 
@@ -519,29 +531,37 @@ static char* to_string_barber_shop(BarberShop* shop)
    return gen_boxes(shop->internal, skel_length, skel);
 }
 
-int get_mtxid_id(){
-	return mtxid;
+int get_shmid_id(BarberShop *shop)
+{
+   require(shop != NULL, "shop argument required");
+   return shop->shmid;
 }
 
-int get_shmid_id(){
-	return shmid;
+int get_mtxid_id(BarberShop* shop)
+{
+   require(shop != NULL, "shop argument required");
+   return shop->mtxid;
 }
+
 
 /* semaphores for mutual exclusion */
-int get_mtx_clients_benches()
+int get_mtx_clients_benches(BarberShop *shop)
 {
-   return mtx_clients_benches;
+   require(shop != NULL, "shop argument required");
+   return shop->mtx_clients_benches;
 }
-
 
 /* semaphores */
-int get_sem_num_clients_in_benches()
+int get_sem_num_clients_in_benches(BarberShop *shop)
 {
-   return mxt_num_clients;
+   require(shop != NULL, "shop argument required");
+   return shop->sem_num_clients_in_benches;
 }
 
-int get_sem_num_benches_pos(){
-   return mxt_num_benches_pos;
+int get_sem_num_benches_pos(BarberShop *shop)
+{
+   require(shop != NULL, "shop argument required");
+   return shop->sem_num_benches_pos;
 }
 
 

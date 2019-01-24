@@ -186,32 +186,46 @@ static void wait_for_client(Barber* barber)
     * 3: receive and greet client (receive its requested services, and give back the barber's id)
     **/
    
-   // !Critical zone: 2 barbers trying to access the clients queue
    require (barber != NULL, "barber argument required");
-
    send_log(barber->logId, (char*)"[wait_for_client]");
+   
+   /* 1. set the client state */
    barber -> state = WAITING_CLIENTS;
 
-   // check for simulation termination
+   /* check for simulation termination */
    if (barber-> shop -> opened) {
-      // TODO down semaphore with number of clients 
-      lock(get_sem_num_clients());
+      /* if empty, wait 
+       * TODO: down semaphore with number of clients
+       */
+      int sem_val = psemctl(get_sem_num_clients_in_benches(barber->shop), 0, GETVAL);  // for debug purposes
+      send_log(barber->logId, concat_2str("[wait_for_client] #clients in benches is: ", int2str(sem_val)));
+
+      lock(get_sem_num_clients_in_benches(barber->shop));
+
+      sem_val = psemctl(get_sem_num_clients_in_benches(barber->shop), 0, GETVAL);      // for debug purposes
+      send_log(barber->logId, concat_2str("[wait_for_client] There is a client! #clients in benches is now ", int2str(sem_val)));
+
+      /* when the code reaches this point, we know there is
+       * at least 1 client */
+
+      /* 2. get next client from client benches 
+       * Critical zone: 2 barbers trying to access the clients queue 
+       * (lock-unlock to ensure safety) */
       
-      /* get next client from client benches (lock-unlock to ensure safety) */
-      send_log(barber->logId, (char*)"[wait_for_client] Going to lock");
-      lock(get_mtx_clients_benches()); 
+      send_log(barber->logId, (char *)"[wait_for_client] Critical zone! Going to lock");
+      lock(get_mtx_clients_benches(barber->shop));
       send_log(barber->logId, (char*)"[wait_for_client] After lock");
    
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
+      
+      send_log(barber->logId, concat_2str("[wait_for_client] After next_client_in_benches, client id is: ", int2str(client.clientID)));
 
-      send_log(barber->logId, (char *)"[wait_for_client] after next next_client_in_benches");
-      send_log(barber->logId, concat_2str("[wait_for_client] client id: ", int2str(client.clientID)));
+      unlock(get_mtx_clients_benches(barber->shop));
+      send_log(barber->logId, (char *)"[wait_for_client] End of Critical zone! After unlock");
 
-      unlock(get_mtx_clients_benches());
-      send_log(barber->logId, (char*)"[wait_for_client] after unlock");
-
+      /* 3. receive and greet client */ 
       receive_and_greet_client(barber->shop, barber->id, client.clientID);
    }
 }
@@ -225,9 +239,11 @@ static int work_available(Barber* barber)
    require (barber != NULL, "barber argument required");
    
    int res = 0;
+   /* todo
    lock(get_mxt_numActiveClients());
    res = (barber->shop->numActiveClients != 0) ? 1 : 0;
    unlock(get_mxt_numActiveClients());
+   */
    return res;
 }
 

@@ -48,8 +48,9 @@ typedef struct _BarberShop_
    /* shared memory and semaphores */
    int shmid;
    int mtxid;                       // barbershop
-   int mtx_clients_benches_id;      // client benches
-   int mxt_numActiveClients;        // num active clients
+   int mtx_clients_benches;         // client benches
+   int sem_num_clients_in_benches;  // number client in benches
+   int sem_num_benches_pos = -1;    // number free positions in client benches
 
    /* other info */
    int numActiveClients;
@@ -93,17 +94,23 @@ int greet_barber(BarberShop* shop, int clientID); // returns barberID
 int shop_opened(BarberShop* shop);
 void close_shop(BarberShop* shop); // no more outside clients accepted
 
+/* auxiliar functions for shared memory structure (the barbershop) */
 void shop_create(BarberShop *shop);
 void shop_destroy(BarberShop *shop);
 void shop_connect(BarberShop *shop);
 void shop_disconnect(BarberShop *shop);
+
+/* auxiliar functions for semaphores */
+void shop_sems_create(BarberShop *shop);
 void lock(int id);
 void unlock(int id);
 
-/* our functions */
-int get_shmid_id();
-int get_mtxid_id();
-int get_mtx_clients_benches_id();
-int get_mxt_numActiveClients();
+/* semaphores for mutual exclusion */
+int get_mtxid_id(BarberShop *shop);
+int get_mtx_clients_benches(BarberShop *shop);
+
+/* semaphores for synchronization */
+int get_sem_num_clients_in_benches(BarberShop *shop);
+int get_sem_num_benches_pos(BarberShop *shop);
 
 #endif

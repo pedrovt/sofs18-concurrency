@@ -176,6 +176,7 @@ static void initSimulation()
                     global->NUM_SCISSORS, global->NUM_COMBS, global->NUM_RAZORS, global->NUM_WASHBASINS,
                     global->NUM_CLIENT_BENCHES_SEATS, global->NUM_CLIENT_BENCHES);
    
+   shop_sems_create(shop);
    char* descText;
    descText = (char*)"Barbers:";
    char* translationsBarbers[] = {
