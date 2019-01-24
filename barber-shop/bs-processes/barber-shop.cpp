@@ -400,10 +400,11 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
-   
-   // todo down do semáforo
 
-   require (num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
+   // todo down do semáforo with number of positions
+   lock(get_mxt_num_benches_pos());
+
+   require(num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
@@ -526,12 +527,22 @@ int get_shmid_id(){
 	return shmid;
 }
 
-int get_mtx_clients_benches_id() {
-   return mtx_clients_benches_id;
+/* semaphores for mutual exclusion */
+int get_mtx_clients_benches()
+{
+   return mtx_clients_benches;
 }
 
-int get_mxt_numActiveClients(){
-	return mxt_numActiveClients;
+
+/* semaphores */
+int get_sem_num_clients_in_benches()
+{
+   return mxt_num_clients;
 }
+
+int get_sem_num_benches_pos(){
+   return mxt_num_benches_pos;
+}
+
 
 

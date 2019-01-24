@@ -171,7 +171,7 @@ static void notify_client_death(Client* client)
       log_client(client);
 
    /* decrease the number of active clients */
-   shop_connect(client->shop);
+   
    
    send_log(client->logId, (char *)"[notify_client_death] going to lock");
    lock(client -> shop ->mxt_numActiveClients);
@@ -182,7 +182,7 @@ static void notify_client_death(Client* client)
    send_log(client->logId, (char *)"[notify_client_death] going to unlock");
    unlock(client->shop->mxt_numActiveClients);
 
-   shop_disconnect(client->shop);
+   
 }
 
 static void wandering_outside(Client* client)
@@ -279,31 +279,39 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
-   // 1: set the client state to WAITING_ITS_TURN
+   /* set the client state */
    client -> state = WAITING_ITS_TURN;
 
-   // 2: enter barbershop (if necessary waiting for an empty seat)
-   // function returns its position in the clients' benches
-   shop_connect(client->shop);
-   
-   send_log(client->logId, (char*)"[wait_its_turn] going to lock");
-   lock(get_mtx_clients_benches_id());
+   /* enter barbershop */
 
-   send_log(client->logId, (char*)"[wait_its_turn] going to enter barber shop");
+   // !SEE
+   /* wait for an empty seat (down semaphore with number of positions) */
+   lock(get_sem_num_benches_pos());
+   send_log(client->logId, (char*)"[wait_its_turn] Free position available");
+
+   /* get position in benches. 
+    * when the code reaches this point, we know there is
+    * at least 1 free position in the client benches */ 
+   lock(get_mtx_clients_benches());
+   send_log(client->logId, (char*)"[wait_its_turn] After lock");
+
    int benchesPosition = enter_barber_shop(client->shop, client->id, client->requests);
    send_log(client->logId, (char*)"[wait_its_turn] entered barber shop at wait_its_turn");
 
-   unlock(get_mtx_clients_benches_id());
-   
-   client -> benchesPosition = benchesPosition;
+   // TODO up semaphore with number of clients
+   unlock(get_sem_num_clients_in_benches());
 
+   unlock(get_mtx_clients_benches());
+   send_log(client->logId, (char *)"[wait_for_client] after unlock");
+
+   client -> benchesPosition = benchesPosition;
+   
    send_log(client->logId, (char*)"[wait_its_turn] going to greet barber");
    client -> barberID = greet_barber(client -> shop, client -> id);
    send_log(client->logId, (char*)"[wait_its_turn] greeted barber");
 
    ensure((client->barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
    
-   shop_disconnect(client->shop);
    log_client(client);
 }
 
@@ -313,20 +321,25 @@ static void rise_from_client_benches(Client* client)
    /** TODO:
     * 1: (exactly what the name says)
     **/
-
-   // ! Critical zone: 2+ clients can rise at the same time!
-   // TODO Semaphore lock
-
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
-   
-   rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
-   client->benchesPosition = -1; // Invalid position, ie not in the bench (similar to rise_from_barber_bench function in barber module)
-   log_client(client);
 
-   // TODO Semaphore unlock
+   // TODO up semaphore with number of free positions
+   /* update benches position semaphore */
+   unlock(get_sem_num_benches_pos());
+
+   /* CRITICAL ZONE: remove client from client benches */
+   lock(get_mtx_clients_benches());
+
+   rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
+   client->benchesPosition = -1;    // Invalid position, ie not in the bench 
+   
+   unlock(get_mtx_clients_benches());
+
+   log_client(client);
 }
 
+// -----------------------------------------------------------------------------
 // TODO after bug
 static void wait_all_services_done(Client* client)
 {

@@ -102,8 +102,10 @@ static void go()
       allBarbersIds[i] = id;
 
       // Child side: run Routine
-      if (id == 0) { 
+      if (id == 0) {
+         shop_connect(barber->shop);
          main_barber(barber);
+         shop_disconnect(barber->shop);
       }
    }
 
@@ -119,8 +121,10 @@ static void go()
       allClientsIds[i] = id;
       
       // Child side: run Routine
-      if (id == 0) { 
+      if (id == 0) {
+         shop_connect(client->shop);
          main_client(client);
+         shop_disconnect(client->shop);
       }
    }
 }

@@ -194,32 +194,24 @@ static void wait_for_client(Barber* barber)
 
    // check for simulation termination
    if (barber-> shop -> opened) {
-      shop_connect(barber->shop);
+      // TODO down semaphore with number of clients 
+      lock(get_sem_num_clients());
       
+      /* get next client from client benches (lock-unlock to ensure safety) */
       send_log(barber->logId, (char*)"[wait_for_client] Going to lock");
-      
-      lock(get_mxt_numActiveClients()); 
+      lock(get_mtx_clients_benches()); 
       send_log(barber->logId, (char*)"[wait_for_client] After lock");
-      send_log(barber->logId, concat_2str("[wait_for_client] num active clients: ", int2str(barber -> shop -> numActiveClients)));
-
-      while (barber -> shop -> numActiveClients <= 0) {};
-
-      // 2: get next client from client benches (if empty, wait)
-      send_log(barber->logId, (char*)"[wait_for_client] working");
-      
+   
       RQItem client = next_client_in_benches(client_benches(barber->shop));
-      send_log(barber->logId, (char*)"[wait_for_client] after next next_client_in_benches");
-
-      send_log(barber->logId, concat_2str("[wait_for_client] client id: ", int2str(client.clientID)));
-
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
 
-      unlock(get_mxt_numActiveClients());
+      send_log(barber->logId, (char *)"[wait_for_client] after next next_client_in_benches");
+      send_log(barber->logId, concat_2str("[wait_for_client] client id: ", int2str(client.clientID)));
+
+      unlock(get_mtx_clients_benches());
       send_log(barber->logId, (char*)"[wait_for_client] after unlock");
 
-      shop_disconnect(barber->shop);
-      
       receive_and_greet_client(barber->shop, barber->id, client.clientID);
    }
 }
@@ -231,6 +223,7 @@ static int work_available(Barber* barber)
     * 1: find a safe way to solve the problem of barber termination
     **/
    require (barber != NULL, "barber argument required");
+   
    int res = 0;
    lock(get_mxt_numActiveClients());
    res = (barber->shop->numActiveClients != 0) ? 1 : 0;
