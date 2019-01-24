@@ -231,11 +231,11 @@ static int work_available(Barber* barber)
     * 1: find a safe way to solve the problem of barber termination
     **/
    require (barber != NULL, "barber argument required");
-   // if clientqueue is empty: done(barber)?
-
-         
-   
-   return 1;
+   int res = 0;
+   lock(get_mtxid_id());
+   res = (barber->shop->numActiveClients != 0) ? 1 : 0;
+   unlock(get_mtxid_id());
+   return res;
 }
 
 static void rise_from_barber_bench(Barber* barber){
