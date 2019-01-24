@@ -307,7 +307,7 @@ static void wait_its_turn(Client* client)
    send_log(client->logId, concat_2str("[wait_its_turn] After enter_barber_shop, benchesPosition is: ", int2str(benchesPosition)));
 
    unlock(get_mtx_clients_benches(client->shop));
-   send_log(client->logId, (char *)"[wait_for_client] End of critical zone! after unlock");
+   send_log(client->logId, (char *)"[wait_its_turn] End of critical zone! after unlock");
 
    /* TODO up semaphore with number of clients in benches */
    unlock(get_sem_num_clients_in_benches(client->shop));

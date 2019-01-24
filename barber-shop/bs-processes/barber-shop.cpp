@@ -462,18 +462,16 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
    // !Critical area. A client can be trying to greet a barber
-
-   shop_connect(shop);
    
    send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
 
-   lock(shop->mtxid);
+   lock(get_mtxid_id(shop));
    // TODO semaphore
    shop -> barber_to_client_ids[clientID] = barberID;
-   unlock(shop->mtxid);
+   unlock(get_mtxid_id(shop));
 
    send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
-   shop_disconnect(shop);
+
 }
 
 // TODO 
@@ -489,15 +487,12 @@ int greet_barber(BarberShop* shop, int clientID)
 
    int res = 0;
 
-   shop_connect(shop);
-   
    send_log(shop->logId, (char*)"[greet_barber] before lock");
-   lock(shop->mtxid);
+   lock(get_mtxid_id(shop));
    res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
 
-   unlock(shop->mtxid);
+   unlock(get_mtxid_id(shop));
    send_log(shop->logId, (char*)"[greet_barber] after lock");
-   shop_disconnect(shop);
 
    send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
 
