@@ -122,7 +122,7 @@ static void go()
          perror("Error on waiting for a thread to conclude");
          return;
       }
-      printf("Client thread %d has terminated\n", i);
+      printf("Barber thread %d has terminated\n", i+1);
    }
    for(i=0; i<global->NUM_CLIENTS; i++) {
       if (pthread_join(cthr[i], NULL) != 0)
@@ -131,7 +131,7 @@ static void go()
          perror("Error on waiting for a thread to conclude");
          return;
       }
-      printf("Client thread %d has terminated\n", i);
+      printf("Client thread %d has terminated\n", i+1);
    }
 
 }
