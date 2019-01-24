@@ -39,7 +39,6 @@ static void initSimulation();
 static pid_t allBarbersIds[MAX_BARBERS];
 static pid_t allClientsIds[MAX_CLIENTS];
 
-
 /* given functions */
 int main(int argc, char* argv[])
 {
@@ -66,8 +65,6 @@ int main(int argc, char* argv[])
    printf("<press RETURN>");
    getchar();
 
-   shop_create(shop);
-   shop_connect(shop);
    initSimulation();
    go();
    finish();
@@ -92,16 +89,12 @@ static void go()
    send_log(logIdClientsDesc, (char*)descText);
    show_barber_shop(shop);
 
-   //? See
-   /* create the shared data structure (barbershop) */
-   
-
    /* create the clients and barbers processes */
    for (int i = 0; i < global -> NUM_BARBERS; i++) 
    {
       log_barber(allBarbers + i);
-      // Launch Barbers
-      // Routine to run is main_barber()     
+      
+      // Launch Barbers.Routine to run is main_barber()     
       Barber* barber = &allBarbers[i];
       check(barber != NULL, "barber to associate with process can't be null");
       
@@ -112,15 +105,13 @@ static void go()
       if (id == 0) { 
          main_barber(barber);
       }
-      
-      //log_barber(allBarbers+i);
    }
 
    for (int i = 0; i < global -> NUM_CLIENTS; i++) 
    {
       log_client(allClients + i);
-      // Launch Clients
-      // Routine to run is main_client()
+    
+      // Launch Clients. Routine to run is main_client()
       Client* client = &allClients[i];
       check(client != NULL, "client to associate with process can't be null");
       
@@ -131,11 +122,7 @@ static void go()
       if (id == 0) { 
          main_client(client);
       }
-
-      //log_client(allClients + i);
    }
-
-   
 }
 
 /**
@@ -146,7 +133,6 @@ static void finish()
    /* TODO: change this function to your needs */
    /* wait for processes to conclude */
 
-   //shop_disconnect(shop);
    int allBarbersStatus[global->NUM_BARBERS];
    int allClientsStatus[global->NUM_CLIENTS];
 
@@ -164,13 +150,18 @@ static void finish()
       // printf("Process %d returned\n", allClientsIds[i]);
    }
 
+   //shop_disconnect(shop);
    //shop_destroy(shop);
-   term_logger();
+   //term_logger();
 }
 
 static void initSimulation()
 {
    /* TODO: change this function to your needs */
+   
+   /* our shared info */
+   shop_create(shop);
+   shop_connect(shop);
 
    srand(time(NULL));
    init_process_logger();

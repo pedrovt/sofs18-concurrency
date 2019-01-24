@@ -279,14 +279,13 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
-   send_log(client->logId, (char*)"[wait_its_turn] hello");
-
    // 1: set the client state to WAITING_ITS_TURN
    client -> state = WAITING_ITS_TURN;
 
    // 2: enter barbershop (if necessary waiting for an empty seat)
    // function returns its position in the clients' benches
    shop_connect(client->shop);
+   
    send_log(client->logId, (char*)"[wait_its_turn] going to lock");
    lock(get_mtx_clients_benches_id());
 
@@ -295,7 +294,6 @@ static void wait_its_turn(Client* client)
    send_log(client->logId, (char*)"[wait_its_turn] entered barber shop at wait_its_turn");
 
    unlock(get_mtx_clients_benches_id());
-   shop_disconnect(client->shop);
    
    client -> benchesPosition = benchesPosition;
 
@@ -304,6 +302,8 @@ static void wait_its_turn(Client* client)
    send_log(client->logId, (char*)"[wait_its_turn] greeted barber");
 
    ensure((client->barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
+   
+   shop_disconnect(client->shop);
    log_client(client);
 }
 

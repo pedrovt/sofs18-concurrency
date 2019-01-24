@@ -52,20 +52,16 @@ void shop_create(BarberShop* shop)
    shop = (BarberShop*) pshmat(shmid, NULL, 0);
 
    /* create access locker */
-   mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   mtxid                  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    mtx_clients_benches_id = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   mxt_numActiveClients = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   mxt_numActiveClients   = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
-   /* unlock shared data structure */
+   /* unlock semaphores*/
    unlock(mtxid);
    unlock(mtx_clients_benches_id);
    unlock(mxt_numActiveClients);
    
    ensure (shop != NULL, "shared data structure can't be null");
-  
-   /* detach shared memory from process addressing space */
-   //shmdt(shop);
-   //shop = NULL;
 }
 
 void shop_connect(BarberShop* shop)
@@ -80,8 +76,8 @@ void shop_connect(BarberShop* shop)
 
 void shop_disconnect(BarberShop* shop)
 {
-   pshmdt(shop);
-   shop = NULL;
+   //pshmdt(shop);
+   //shop = NULL;
 }
 
 void shop_destroy(BarberShop* shop)
@@ -522,10 +518,6 @@ static char* to_string_barber_shop(BarberShop* shop)
    return gen_boxes(shop->internal, skel_length, skel);
 }
 
-int get_mtx_clients_benches_id(){
-	return mtx_clients_benches_id;
-}
-
 int get_mtxid_id(){
 	return mtxid;
 }
@@ -534,7 +526,12 @@ int get_shmid_id(){
 	return shmid;
 }
 
+int get_mtx_clients_benches_id() {
+   return mtx_clients_benches_id;
+}
+
 int get_mxt_numActiveClients(){
 	return mxt_numActiveClients;
 }
+
 
