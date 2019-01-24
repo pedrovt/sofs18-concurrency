@@ -232,9 +232,9 @@ static int work_available(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
    int res = 0;
-   lock(client -> shop ->mxt_numActiveClients);
+   lock(get_mxt_numActiveClients());
    res = (barber->shop->numActiveClients != 0) ? 1 : 0;
-   unlock(client -> shop ->mxt_numActiveClients);
+   unlock(get_mxt_numActiveClients());
    return res;
 }
 
