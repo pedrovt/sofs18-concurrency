@@ -151,7 +151,6 @@ static void life(Barber* barber)
       sit_in_barber_bench(barber);
       wait_for_client(barber); 
    }
-   //psemctlpsemctl(accessrc, 0, IPC_RMID, NULL);
    done(barber);
 }
 
@@ -197,24 +196,26 @@ static void wait_for_client(Barber* barber)
    if (barber-> shop -> opened) {
       shop_connect(barber->shop);
       
-      send_log(barber->logId, concat_2str("[wait_for_client] clients inside: ", int2str(barber->shop->numClientsInside)));
       send_log(barber->logId, (char*)"[wait_for_client] Going to lock");
       
-      lock(barber->shop->mxt_numActiveClients); 
+      lock(get_mxt_numActiveClients()); 
       send_log(barber->logId, (char*)"[wait_for_client] After lock");
+      send_log(barber->logId, concat_2str("[wait_for_client] num active clients: ", int2str(barber -> shop -> numActiveClients)));
 
-      while (barber -> shop -> numActiveClients) {};
+      while (barber -> shop -> numActiveClients <= 0) {};
 
       // 2: get next client from client benches (if empty, wait)
       send_log(barber->logId, (char*)"[wait_for_client] working");
       
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       send_log(barber->logId, (char*)"[wait_for_client] after next next_client_in_benches");
-      
+
+      send_log(barber->logId, concat_2str("[wait_for_client] client id: ", int2str(client.clientID)));
+
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
 
-      unlock(barber->shop->mxt_numActiveClients);
+      unlock(get_mxt_numActiveClients());
       send_log(barber->logId, (char*)"[wait_for_client] after unlock");
 
       shop_disconnect(barber->shop);
