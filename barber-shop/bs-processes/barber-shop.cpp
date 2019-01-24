@@ -26,8 +26,8 @@ static Service services[MAX_BARBERS];
 
 
 // #############################################################################
-static long key = 0x3333L; // key for semaphore
-static long clients_bench_key = 0x4444L;
+//static long key = 0x3333L; // key for semaphore
+//static long clients_bench_key = 0x4444L;
 
 int shmid = -1;
 int mtxid = -1; // mutual exclusion semaphore
@@ -448,7 +448,7 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 
    shop_connect(shop);
    
-   send_log(shop->logId, "[receive_and_greet_client] before lock");
+   send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
    lock(mtxid);
    barberIDs[barberID] = clientID;
    clientIDs[clientID] = barberID;
@@ -456,7 +456,7 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    // TODO up semaphore
    unlock(mtxid);
 
-   send_log(shop->logId, "[receive_and_greet_client] after lock");
+   send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
    shop_disconnect(shop);
 }
 
@@ -475,12 +475,12 @@ int greet_barber(BarberShop* shop, int clientID)
 
    shop_connect(shop);
    
-   send_log(shop->logId, "[greet_barber] before lock");
+   send_log(shop->logId, (char*)"[greet_barber] before lock");
    lock(mtxid);
    res = clientIDs[clientID]; // should be okay, the problem is in the function above
    
    unlock(mtxid);
-   send_log(shop->logId, "[greet_barber] after lock");
+   send_log(shop->logId, (char*)"[greet_barber] after lock");
    shop_disconnect(shop);
 
    send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
@@ -513,5 +513,9 @@ void close_shop(BarberShop* shop)
 static char* to_string_barber_shop(BarberShop* shop)
 {
    return gen_boxes(shop->internal, skel_length, skel);
+}
+
+int get_mtx_clients_benches_id(){
+	return mtx_clients_benches_id;
 }
 

@@ -92,4 +92,6 @@ void shop_disconnect(BarberShop *shop);
 void lock(int id);
 void unlock(int id);
 
+int get_mtx_clients_benches_id();
+
 #endif
