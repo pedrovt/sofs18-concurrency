@@ -146,14 +146,13 @@ static void life(Client* client)
             wait_all_services_done(client);
             client->shop->trips--;
             printf("Client %d went %d times\n", client->id, i+1);
-            printf("Current missing trips to close: %d", client->shop->trips);
+            printf("Current missing trips to close: %d\n", client->shop->trips);
          }
-//         client->shop->services--;
          i++;
-//         printf("Client %d went %d times", client->id, i);
       }
    }
    client->state = DONE;
+   client->barberID = -1;
    log_client(client);
    notify_client_death(client);
 }
@@ -300,24 +299,6 @@ static void wait_all_services_done(Client* client)
     * At the end the client must leave the barber shop
     **/
 
-   /* require (client != NULL, "client argument required");
-
-   client->state = WAITING_SERVICE;
-   log_client(client);
-   Service service = wait_service_from_barber(client->shop, client->barberID);
-
-   client->state = WAITING_SERVICE_START;
-   log_client(client);
-
-   if(is_barber_chair_service(&service)) {
-      sit_in_barber_chair(&client->shop->barberChair[service_position(&service)], client->id);
-      client->state = service.request == SHAVE_REQ ? HAVING_A_SHAVE : HAVING_A_HAIRCUT;
-      pthread_cond_broadcast(&client->shop->sit_barber_chairCD);
-   } else {
-      sit_in_washbasin(&client->shop->washbasin[service_position(&service)], client->id);
-      client->state = HAVING_A_HAIR_WASH;
-   } */
-
    require (client != NULL, "client argument required");
    while(client->requests != 0){
       client->state = WAITING_SERVICE;
@@ -341,6 +322,7 @@ static void wait_all_services_done(Client* client)
          rise_from_washbasin(washbasin(client->shop, service_position(&service)), client->id);
       }
       client->requests -= service_request(&service);
+      printf("Client %d missing requests %d\n", client->id, client->requests);
    }
    client->state = DONE;
    leave_barber_shop(client->shop, client->id);
