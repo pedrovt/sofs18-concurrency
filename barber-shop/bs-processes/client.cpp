@@ -169,6 +169,20 @@ static void notify_client_death(Client* client)
 
    if (client->state == NONE)
       log_client(client);
+
+   /* decrease the number of active clients */
+   shop_connect(client->shop);
+   
+   send_log(client->logId, (char *)"[notify_client_death] going to lock");
+   lock(client -> shop ->mxt_numActiveClients);
+
+   int old_value = client -> shop -> numActiveClients;
+   client -> shop -> numActiveClients = old_value - 1 ;
+
+   send_log(client->logId, (char *)"[notify_client_death] going to unlock");
+   unlock(client->shop->mxt_numActiveClients);
+
+   shop_disconnect(client->shop);
 }
 
 static void wandering_outside(Client* client)

@@ -44,9 +44,17 @@ typedef struct _BarberShop_
    int logId;
    char* internal;
 
+   /* our info */
+   /* shared memory and semaphores */
    int shmid;
-   int mtxid;                       // mutual exclusion semaphore
-   int mtx_clients_benches_id;
+   int mtxid;                       // barbershop
+   int mtx_clients_benches_id;      // client benches
+   int mxt_numActiveClients;        // num active clients
+
+   /* other info */
+   int numActiveClients;
+   int barber_to_client_ids[MAX_BARBERS];
+
 } BarberShop;
 
 int num_lines_barber_shop(BarberShop* shop);
