@@ -33,8 +33,8 @@ static int logIdClientsDesc;
 static void help(char* prog, Parameters *params);
 static void processArgs(Parameters *params, int argc, char* argv[]);
 static void showParams(Parameters *params);
-static void go();
-static void finish();
+static void go(pthread_t [], pthread_t []);
+static void finish(pthread_t [], pthread_t []);
 static void initSimulation();
 
 int main(int argc, char* argv[])
@@ -62,9 +62,12 @@ int main(int argc, char* argv[])
    printf("<press RETURN>");
    getchar();
 
+   pthread_t bthr[global->NUM_BARBERS];
+   pthread_t cthr[global->NUM_CLIENTS];
+
    initSimulation();
-   go();
-   finish();
+   go(bthr, cthr);
+   finish(bthr, cthr);
 
    return 0;
 }
@@ -72,7 +75,7 @@ int main(int argc, char* argv[])
 /**
  * launch threads/processes for barbers and clients
  */
-static void go()
+static void go(pthread_t bthr[], pthread_t cthr[])
 {
    /* TODO: change this function to your needs */
 
@@ -92,46 +95,23 @@ static void go()
       log_client(allClients+i);
 
    // Launching barber threads
-   pthread_t bthr[global->NUM_BARBERS];
    int i;
    for(i=0; i<global->NUM_BARBERS; i++) {
       if (pthread_create(&bthr[i], NULL, main_barber, &allBarbers[i]) != 0)
         {
-            fprintf(stderr, "Barber %d\n", i);
+            //fprintf(stderr, "Barber %d\n", i);
             perror("Error on launching the barber thread");
             return;
         }
    }
-
    // Launching client threads
-   pthread_t cthr[global->NUM_CLIENTS];
    for(i=0; i<global->NUM_CLIENTS; i++) {
       if (pthread_create(&cthr[i], NULL, main_client, &allClients[i]) != 0)
         {
-            fprintf(stderr, "Client %d\n", i);
+            //fprintf(stderr, "Client %d\n", i);
             perror("Error on launching the client thread");
             return;
         }
-   }
-
-   // Waiting for threads
-   for(i=0; i<global->NUM_BARBERS; i++) {
-      if (pthread_join(bthr[i], NULL) != 0)
-      {
-         fprintf(stderr, "Barber %d\n", i);
-         perror("Error on waiting for a thread to conclude");
-         return;
-      }
-      printf("Barber thread %d has terminated\n", i+1);
-   }
-   for(i=0; i<global->NUM_CLIENTS; i++) {
-      if (pthread_join(cthr[i], NULL) != 0)
-      {
-         fprintf(stderr, "Client %d\n", i);
-         perror("Error on waiting for a thread to conclude");
-         return;
-      }
-      printf("Client thread %d has terminated\n", i+1);
    }
 
 }
@@ -139,9 +119,30 @@ static void go()
 /**
  * synchronize with the termination of all active entities (barbers and clients), 
  */
-static void finish()
+static void finish(pthread_t bthr[], pthread_t cthr[])
 {
    /* TODO: change this function to your needs */
+
+   int i;
+   // Waiting for threads
+   for(i=0; i<global->NUM_BARBERS; i++) {
+      if (pthread_join(bthr[i], NULL) != 0)
+      {
+         //fprintf(stderr, "Barber %d\n", i);
+         perror("Error on waiting for a thread to conclude");
+         return;
+      }
+      //printf("Barber thread %d has terminated\n", i+1);
+   }
+   for(i=0; i<global->NUM_CLIENTS; i++) {
+      if (pthread_join(cthr[i], NULL) != 0)
+      {
+         //fprintf(stderr, "Client %d\n", i);
+         perror("Error on waiting for a thread to conclude");
+         return;
+      }
+      //printf("Client thread %d has terminated\n", i+1);
+   }
 
    term_logger();
 }

@@ -144,9 +144,8 @@ static void life(Client* client)
             wait_its_turn(client);
             rise_from_client_benches(client);
             wait_all_services_done(client);
-            client->shop->trips--;
-            printf("Client %d went %d times\n", client->id, i+1);
-            printf("Current missing trips to close: %d\n", client->shop->trips);
+            /* printf("Client %d went %d times\n", client->id, i+1);
+            printf("Current missing trips to close: %d\n", client->shop->trips); */
          }
          i++;
       }
@@ -164,9 +163,9 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
-   pthread_mutex_lock(&client->shop->tripsCR);
-   client->shop->trips += client->num_trips_to_barber;
-   pthread_mutex_unlock(&client->shop->tripsCR);
+   pthread_mutex_lock(&client->shop->client_benchCR);
+   client->shop->clientsOn += 1;
+   pthread_mutex_unlock(&client->shop->client_benchCR);
 
    log_client(client);
 }
@@ -176,6 +175,11 @@ static void notify_client_death(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client ceases its existence.
     **/
+
+   pthread_mutex_lock(&client->shop->client_benchCR);
+   client->shop->clientsOn -= 1;
+   pthread_cond_broadcast(&client->shop->sit_client_benchCD);
+   pthread_mutex_unlock(&client->shop->client_benchCR);
 
    require (client != NULL, "client argument required");
 
@@ -322,7 +326,7 @@ static void wait_all_services_done(Client* client)
          rise_from_washbasin(washbasin(client->shop, service_position(&service)), client->id);
       }
       client->requests -= service_request(&service);
-      printf("Client %d missing requests %d\n", client->id, client->requests);
+      //printf("Client %d missing requests %d\n", client->id, client->requests);
    }
    client->state = DONE;
    leave_barber_shop(client->shop, client->id);

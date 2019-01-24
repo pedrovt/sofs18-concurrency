@@ -175,38 +175,39 @@ static void wait_for_client(Barber* barber)
     **/
 
    // Zona critica, dois barbeiros a aceder a fila de clientes ao mesmo tempo
-   pthread_mutex_lock(&barber->shop->client_benchCR);
 
    require (barber != NULL, "barber argument required");
 
    barber->state = WAITING_CLIENTS;
    log_barber(barber);
 
+   int tmp = 0;
+   pthread_mutex_lock(&barber->shop->client_benchCR);
    // Verificar se a lista esta vazia e mais seguro, visto que verificar se todos os lugares estao vazios
    // Depende que o cliente ja tenha chamado a funcao rise, o que causava que alguns barbeiros ficassem presos neste while
-   while(empty_client_queue(&barber->shop->clientBenches.queue) && barber->shop->trips != 0)
+   while(empty_client_queue(&barber->shop->clientBenches.queue) && barber->shop->clientsOn != 0)
    {
       pthread_cond_wait(&barber->shop->sit_client_benchCD, &barber->shop->client_benchCR);
-      printf("Entering wait condition");
+      //printf("Entering wait condition");
    }
 
    RQItem client;
-   if (barber->shop->trips != 0) client = next_client_in_benches(client_benches(barber->shop));
+   if (barber->shop->clientsOn != 0) {
+      client = next_client_in_benches(client_benches(barber->shop));
+      tmp = 1;
+   }
 
    pthread_mutex_unlock(&barber->shop->client_benchCR);
 
-   if (barber->shop->trips != 0)
-   {
+   if (tmp) {
       barber->clientID = client.clientID;
       barber->reqToDo = client.request;
       log_barber(barber);  // (if necessary) more than one in proper places!!!
       receive_and_greet_client(barber->shop, barber->id, client.clientID);
-   }
-   else
-   {
+   } else {
       barber->state = DONE;
       log_barber(barber);
-      printf("No more clients!!!\n");  
+      //printf("No more clients!!!\n");  
    }
 }
 
@@ -218,9 +219,13 @@ static int work_available(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   int res = 0;
+   pthread_mutex_lock(&barber->shop->client_benchCR);
    //printf("Work: %d\n", barber->shop->services);
-   if (barber->shop->trips != 0) return 1;
-   return 0;
+   if (barber->shop->clientsOn != 0) res = 1;
+   pthread_mutex_unlock(&barber->shop->client_benchCR);
+
+   return res;
 }
 
 static void rise_from_barber_bench(Barber* barber)
@@ -409,12 +414,14 @@ static void process_resquests_from_client(Barber* barber)
          {
             while(barber_chair_with_a_client(barber_chair(barber->shop, barber->chairPosition)));
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+            pthread_cond_signal(&barber->shop->rise_barber_chairCD);
             barber->chairPosition = -1;
          }
          else
          {
             while(washbasin_with_a_client(washbasin(barber->shop, barber->basinPosition)));
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+            pthread_cond_signal(&barber->shop->rise_washbasinCD);
             barber->basinPosition = -1;
          }
 

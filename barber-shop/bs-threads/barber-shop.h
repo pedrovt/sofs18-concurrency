@@ -63,7 +63,7 @@ typedef struct _BarberShop_
    int logId;
    char* internal;
 
-   int trips;
+   int clientsOn;
 
    pthread_mutex_t barber_benchCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras dos barbeiros
 
@@ -94,7 +94,7 @@ typedef struct _BarberShop_
    pthread_mutex_t razorCR = PTHREAD_MUTEX_INITIALIZER; // Para os razors
    pthread_cond_t razor_returnCD = PTHREAD_COND_INITIALIZER;
 
-   pthread_mutex_t tripsCR = PTHREAD_MUTEX_INITIALIZER; // Para os serviços
+   pthread_mutex_t clientsCR = PTHREAD_MUTEX_INITIALIZER; // Para os serviços
 
 } BarberShop;
 
