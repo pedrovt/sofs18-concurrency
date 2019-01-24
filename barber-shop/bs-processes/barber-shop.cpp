@@ -41,8 +41,7 @@ void unlock(int id)
 
 void lock(int id)
 {
-   struct sembuf down = {0, -1, 0};
-   psemop(id, &down, 1);
+   psem_down(id, 0);
 }
 
 /* auxiliar functions for shared memory structure (the barbershop) */
@@ -70,18 +69,18 @@ void shop_create(BarberShop* shop)
 
 void shop_connect(BarberShop* shop)
 {  
-   printf("\n[shop_connect] Connecting to %d...", shmid);
+   //printf("\n[shop_connect] Connecting to %d...", shmid);
 
    /* attach shared memory to process addressing space */
    shop = (BarberShop*) pshmat(shmid, NULL, 0);
 
-   printf("\n[shop_connected] Connected sucessfully");
+   //printf("\n[shop_connected] Connected sucessfully");
 }
 
 void shop_disconnect(BarberShop* shop)
 {
-   pshmdt(shop);
-   shop = NULL;
+   // pshmdt(shop);
+   // shop = NULL;
 }
 
 void shop_destroy(BarberShop* shop)
@@ -352,12 +351,12 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   lock();
+   lock(mtxid);
    while (service_used(&services[barberID - 1]))
       ;
    Service res = services[barberID - 1];
    used_service(&services[barberID - 1], 1);
-   unlock();
+   unlock(mtxid);
 
    return res;
 }
@@ -369,10 +368,10 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   lock();
+   lock(mtxid);
    services[service_barber_id(&service) - 1] = service;
    used_service(&services[service_barber_id(&service) - 1], 0);
-   unlock();
+   unlock(mtxid);
 
    require (shop != NULL, "shop argument required");
 
@@ -434,7 +433,7 @@ void leave_barber_shop(BarberShop* shop, int clientID)
 // #############################################################################
 // #############################################################################
 // TODO
-// !HAS BUGS
+// NOT BEING CALLED
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
@@ -445,16 +444,19 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   send_log(shop->logId, " receive_and_greet_client");
-
    // !Critical area. A client can be trying to greet a barber
+
    shop_connect(shop);
+   
+   send_log(shop->logId, "[receive_and_greet_client] before lock");
    lock(mtxid);
    barberIDs[barberID] = clientID;
    clientIDs[clientID] = barberID;
    
    // TODO up semaphore
    unlock(mtxid);
+
+   send_log(shop->logId, "[receive_and_greet_client] after lock");
    shop_disconnect(shop);
 }
 
@@ -471,17 +473,17 @@ int greet_barber(BarberShop* shop, int clientID)
 
    int res = 0;
 
-   send_log(shop -> logId, "before get_barber_id at at greet_barber");
-   
    shop_connect(shop);
-   send_log(shop->logId, "after shop_connect");
-
-   lock(mtxid);
-   res = clientIDs[clientID]; 
-   unlock(mtxid);
-   shop_disconnect(shop);
    
-   send_log(shop -> logId, "after get_barber_id at at greet_barber");
+   send_log(shop->logId, "[greet_barber] before lock");
+   lock(mtxid);
+   res = clientIDs[clientID]; // should be okay, the problem is in the function above
+   
+   unlock(mtxid);
+   send_log(shop->logId, "[greet_barber] after lock");
+   shop_disconnect(shop);
+
+   send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
 
    ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
 

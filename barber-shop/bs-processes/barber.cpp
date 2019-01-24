@@ -196,13 +196,14 @@ static void wait_for_client(Barber* barber)
    // check for simulation termination
    if (barber-> shop -> opened) {
       shop_connect(barber->shop);
-      send_log(barber->logId, concat_2str("[wait_for_client] CLIENTS INSIDE", int2str(barber->shop->numClientsInside)));
+      send_log(barber->logId, concat_2str("[wait_for_client] CLIENTS INSIDE: ", int2str(barber->shop->numClientsInside)));
       send_log(barber->logId, "[wait_for_client] Going to lock");
-      lock(barber -> shop ->mtx_clients_benches_id);
+      lock(barber->shop->mtx_clients_benches_id); //! <- BUG. gives psemop at "process.cpp":132: Invalid argument
+
       send_log(barber->logId, "[wait_for_client] After lock");
       
       // 2: get next client from client benches (if empty, wait)
-      while (no_more_clients(&(barber->shop->clientBenches)));
+      while (no_more_clients(&(barber->shop->clientBenches)));    //! <- verify if it's the correct way to verify if it's empty
       
       send_log(barber->logId, "[wait_for_client] working");
       

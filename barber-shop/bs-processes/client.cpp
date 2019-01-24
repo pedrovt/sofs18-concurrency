@@ -138,9 +138,7 @@ static void life(Client* client)
       if (vacancy_in_barber_shop(client))
       {
          select_requests(client);
-         send_log(client->logId, " WAITING FOR ITS TURN");
          wait_its_turn(client);
-         send_log(client->logId, " DONE WAITING FOR ITS TURN");
          rise_from_client_benches(client);
          wait_all_services_done(client);
          i++;
@@ -267,20 +265,23 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
+   send_log(client->logId, "[wait_its_turn] hello");
+
    // 1: set the client state to WAITING_ITS_TURN
    client -> state = WAITING_ITS_TURN;
 
    // 2: enter barbershop (if necessary waiting for an empty seat)
    // function returns its position in the clients' benches
-   //shop_connect(client->shop);
-   //lock(client->shop->mtx_clients_benches_id);
+   shop_connect(client->shop);
+   send_log(client->logId, "[wait_its_turn] going to lock");
+   lock(client->shop->mtx_clients_benches_id);
 
    send_log(client->logId, "[wait_its_turn] going to enter barber shop");
    int benchesPosition = enter_barber_shop(client->shop, client->id, client->requests);
    send_log(client->logId, "[wait_its_turn] entered barber shop at wait_its_turn");
 
-   //unlock(client->shop->mtx_clients_benches_id);
-   //shop_disconnect(client->shop);
+   unlock(client->shop->mtx_clients_benches_id);
+   shop_disconnect(client->shop);
    
    client -> benchesPosition = benchesPosition;
 
