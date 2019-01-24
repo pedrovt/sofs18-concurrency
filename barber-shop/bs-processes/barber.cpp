@@ -198,7 +198,7 @@ static void wait_for_client(Barber* barber)
       shop_connect(barber->shop);
       send_log(barber->logId, concat_2str("[wait_for_client] CLIENTS INSIDE: ", int2str(barber->shop->numClientsInside)));
       send_log(barber->logId, (char*)"[wait_for_client] Going to lock");
-      lock(barber->shop->mtx_clients_benches_id); //! <- BUG. gives psemop at "process.cpp":132: Invalid argument
+      lock(get_mtx_clients_benches_id()); //! <- BUG. gives psemop at "process.cpp":132: Invalid argument
 
       send_log(barber->logId, (char*)"[wait_for_client] After lock");
       
@@ -213,7 +213,7 @@ static void wait_for_client(Barber* barber)
       barber->clientID = client.clientID;
       barber->reqToDo = client.request;
 
-      unlock(barber->shop->mtx_clients_benches_id);
+      unlock(get_mtx_clients_benches_id());
 
       shop_disconnect(barber->shop);
       

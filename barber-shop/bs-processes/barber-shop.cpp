@@ -515,3 +515,7 @@ static char* to_string_barber_shop(BarberShop* shop)
    return gen_boxes(shop->internal, skel_length, skel);
 }
 
+int get_mtx_clients_benches_id(){
+	return mtx_clients_benches_id;
+}
+
