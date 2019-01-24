@@ -101,5 +101,8 @@ void lock(int id);
 void unlock(int id);
 
 int get_mtx_clients_benches_id();
+int get_mtxid_id();
+int get_shmid_id();
+int get_mxt_numActiveClients();
 
 #endif

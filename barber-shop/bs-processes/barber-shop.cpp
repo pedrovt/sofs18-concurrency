@@ -526,3 +526,15 @@ int get_mtx_clients_benches_id(){
 	return mtx_clients_benches_id;
 }
 
+int get_mtxid_id(){
+	return mtxid;
+}
+
+int get_shmid_id(){
+	return shmid;
+}
+
+int get_mxt_numActiveClients(){
+	return mxt_numActiveClients;
+}
+
