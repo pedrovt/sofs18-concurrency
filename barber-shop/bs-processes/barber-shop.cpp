@@ -534,15 +534,4 @@ int get_mxt_numActiveClients(){
 	return mxt_numActiveClients;
 }
 
-int get_mtxid_id(){
-	return mtxid;
-}
-
-int get_shmid_id(){
-	return shmid;
-}
-
-int get_mxt_numActiveClients(){
-	return mxt_numActiveClients;
-}
 
