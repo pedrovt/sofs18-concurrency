@@ -404,9 +404,9 @@ static void process_resquests_from_client(Barber* barber)
          log_barber(barber);
       }
    }
-   
-   
-   client_done(barber -> shop, barber -> clientID);
+
+
+   release_client(barber);
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 
