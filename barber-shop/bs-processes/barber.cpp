@@ -54,7 +54,7 @@ static void sit_in_barber_bench(Barber* barber);
 static void wait_for_client(Barber* barber);
 static int work_available(Barber* barber);
 static void rise_from_barber_bench(Barber* barber);
-static void process_resquests_from_client(Barber* barber);
+static void process_requests_from_client(Barber* barber);
 static void release_client(Barber* barber);
 static void done(Barber* barber);
 
@@ -334,7 +334,7 @@ static void rise_from_barber_bench(Barber* barber){
 
 // #############################################################################
 // TODO after friday
-static void process_resquests_from_client(Barber* barber)
+static void process_requests_from_client(Barber* barber)
 {
    /** TODO:
     * Process one client request at a time, until all requests are fulfilled.

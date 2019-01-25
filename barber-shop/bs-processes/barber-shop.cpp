@@ -448,7 +448,12 @@ void inform_client_on_service(BarberShop* shop, Service service)
    /** TODO:
     * function called from a barber, expecting to inform a client of its next service
     **/
-
+   send_log(shop->logId,concat_6str("Service ",
+           int2str(service.request),
+           " going to be performed on client ",
+           int2str(service.clientID),
+           " by barber ",
+           int2str(service.barberID)));
    lock(shop->mtx_shop);
    services[service_barber_id(&service) - 1] = service;
    used_service(&services[service_barber_id(&service) - 1], 0);
