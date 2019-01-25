@@ -61,6 +61,12 @@ static void wait_all_services_done(Client* client);
 
 static char* to_string_client(Client* client);
 
+// #############################################################################
+// Our functions and fields
+
+// #############################################################################
+// Getters & other util functions
+// No need to change these
 size_t sizeof_client()
 {
    return sizeof(Client);
@@ -147,6 +153,33 @@ static void life(Client* client)
    notify_client_death(client);
 }
 
+static char *to_string_client(Client *client)
+{
+   require(client != NULL, "client argument required");
+
+   if (client->internal == NULL)
+      client->internal = (char *)mem_alloc(skel_length + 1);
+
+   char requests[4];
+   requests[0] = (client->requests & HAIRCUT_REQ) ? 'H' : ':',
+   requests[1] = (client->requests & WASH_HAIR_REQ) ? 'W' : ':',
+   requests[2] = (client->requests & SHAVE_REQ) ? 'S' : ':',
+   requests[3] = '\0';
+
+   char *pos = (char *)"-";
+   if (client->chairPosition >= 0)
+      pos = int2nstr(client->chairPosition + 1, 1);
+   else if (client->basinPosition >= 0)
+      pos = int2nstr(client->basinPosition + 1, 1);
+
+   return gen_boxes(client->internal, skel_length, skel,
+                    int2nstr(client->id, 2),
+                    client->barberID > 0 ? int2nstr(client->barberID, 2) : "--",
+                    requests, stateText[client->state], pos);
+}
+
+// #############################################################################
+// Functions to (maybe) be developed
 static void notify_client_birth(Client* client)
 {
    require (client != NULL, "client argument required");
@@ -159,6 +192,7 @@ static void notify_client_birth(Client* client)
       log_client(client);
 }
 
+// TODO [FINISH SIMULATION] verify if it's needed
 static void notify_client_death(Client* client)
 {
    /** TODO:
@@ -167,13 +201,11 @@ static void notify_client_death(Client* client)
 
    require (client != NULL, "client argument required");
 
-   if (client->state == NONE)
+   if (client -> state == NONE)
       log_client(client);
 
    /* decrease the number of active clients */
-   
-   
-   send_log(client->logId, (char *)"[notify_client_death] going to lock");
+   /*send_log(client->logId, (char *)"[notify_client_death] going to lock");
    lock(get_mtxid_id(client->shop));
 
    int old_value = client -> shop -> numActiveClients;
@@ -181,8 +213,12 @@ static void notify_client_death(Client* client)
 
    send_log(client->logId, (char *)"[notify_client_death] going to unlock");
    unlock(get_mtxid_id(client->shop));
-
+   */
 }
+
+// #############################################################################
+// Functions to be developed
+// TODO until friday
 
 static void wandering_outside(Client* client)
 {
@@ -224,7 +260,7 @@ static int vacancy_in_barber_shop(Client* client)
    return res;
 }
 
-// TODO after bug
+// TODO confirm
 static void select_requests(Client* client)
 {
    /** TODO:
@@ -261,8 +297,7 @@ static void select_requests(Client* client)
    printf("LEAVING REQUESTS");
 }
 
-// TODO 
-// !BUG
+// TODO finish friday
 static void wait_its_turn(Client* client)
 {
    /** TODO:
@@ -327,7 +362,7 @@ static void wait_its_turn(Client* client)
    log_client(client);
 }
 
-// TODO finish
+// TODO finish friday
 static void rise_from_client_benches(Client* client)
 {
    /** TODO:
@@ -351,8 +386,8 @@ static void rise_from_client_benches(Client* client)
    log_client(client);
 }
 
-// -----------------------------------------------------------------------------
-// TODO after bug
+// #############################################################################
+// TODO after friday
 static void wait_all_services_done(Client* client)
 {
    /** TODO:
@@ -405,30 +440,3 @@ static void wait_all_services_done(Client* client)
    leave_barber_shop(client -> shop, client -> id);
    log_client(client); // more than one in proper places!!!
 }
-
-
-static char* to_string_client(Client* client)
-{
-   require (client != NULL, "client argument required");
-
-   if (client->internal == NULL)
-      client->internal = (char*)mem_alloc(skel_length + 1);
-
-   char requests[4];
-   requests[0] = (client->requests & HAIRCUT_REQ) ?   'H' : ':',
-   requests[1] = (client->requests & WASH_HAIR_REQ) ? 'W' : ':',
-   requests[2] = (client->requests & SHAVE_REQ) ?     'S' : ':',
-   requests[3] = '\0';
-
-   char* pos = (char*)"-";
-   if (client->chairPosition >= 0)
-      pos = int2nstr(client->chairPosition+1, 1);
-   else if (client->basinPosition >= 0)
-      pos = int2nstr(client->basinPosition+1, 1);
-
-   return gen_boxes(client->internal, skel_length, skel,
-                    int2nstr(client->id, 2),
-                    client->barberID > 0 ? int2nstr(client->barberID, 2) : "--",
-                    requests, stateText[client->state], pos);
-}
-

@@ -58,11 +58,13 @@ static void process_resquests_from_client(Barber* barber);
 static void release_client(Barber* barber);
 static void done(Barber* barber);
 
+static char* to_string_barber(Barber* barber);
+
+// #############################################################################
+// Our functions and fields
 static void process_haircut_request(Barber* barber);
 static void process_shave_request(Barber* barber);
 static void process_hairwash_request(Barber* barber);
-
-static char* to_string_barber(Barber* barber);
 
 static int id = random_int(1, 10000);
 static int create_semaphore(){
@@ -73,6 +75,9 @@ static int create_semaphore(){
 }
 int accessrc = create_semaphore();          // controlo de acesso a regiões críticas
 
+// #############################################################################
+// Getters & other util functions
+// No need to change these
 size_t sizeof_barber()
 {
    return sizeof(Barber);
@@ -154,6 +159,34 @@ static void life(Barber* barber)
    done(barber);
 }
 
+static char *to_string_barber(Barber *barber)
+{
+   require(barber != NULL, "barber argument required");
+
+   if (barber->internal == NULL)
+      barber->internal = (char *)mem_alloc(skel_length + 1);
+
+   char tools[4];
+   tools[0] = (barber->tools & SCISSOR_TOOL) ? 'S' : '-',
+   tools[1] = (barber->tools & COMB_TOOL) ? 'C' : '-',
+   tools[2] = (barber->tools & RAZOR_TOOL) ? 'R' : '-',
+   tools[3] = '\0';
+
+   char *pos = (char *)"-";
+   if (barber->chairPosition >= 0)
+      pos = int2nstr(barber->chairPosition + 1, 1);
+   else if (barber->basinPosition >= 0)
+      pos = int2nstr(barber->basinPosition + 1, 1);
+
+   return gen_boxes(barber->internal, skel_length, skel,
+                    int2nstr(barber->id, 2),
+                    barber->clientID > 0 ? int2nstr(barber->clientID, 2) : "--",
+                    tools, stateText[barber->state], pos);
+}
+
+// #############################################################################
+// Functions to be developed
+// TODO until friday
 static void sit_in_barber_bench(Barber* barber)
 {
    /** TODO:
@@ -271,7 +304,8 @@ static void rise_from_barber_bench(Barber* barber){
    log_barber(barber);
 }
 
-// TODO after bug
+// #############################################################################
+// TODO after friday
 static void process_resquests_from_client(Barber* barber)
 {
    /** TODO:
@@ -432,7 +466,6 @@ static void process_resquests_from_client(Barber* barber)
    ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
-// TODO after bug
 static void release_client(Barber* barber)
 {
    /** TODO:
@@ -460,7 +493,10 @@ static void done(Barber* barber)
    log_barber(barber);
 }
 
-// TODO after bug
+// #############################################################################
+// Process Requests
+// TODO after friday
+
 static void process_haircut_request(Barber* barber)
 {
    /** TODO:
@@ -485,8 +521,8 @@ static void process_haircut_request(Barber* barber)
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 }
 
-// TODO after bug
-static void process_hairwash_request(Barber* barber){
+static void process_hairwash_request(Barber* barber)
+{
    /** TODO:
     * ([incomplete] example code for task completion algorithm)
     **/
@@ -505,8 +541,8 @@ static void process_hairwash_request(Barber* barber){
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 }
 
-// TODO after bug
-static void process_shave_request(Barber* barber){
+static void process_shave_request(Barber* barber)
+{
    /** TODO:
     * ([incomplete] example code for task completion algorithm)
     **/
@@ -525,29 +561,4 @@ static void process_shave_request(Barber* barber){
    }
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
-}
-
-static char* to_string_barber(Barber* barber)
-{
-   require (barber != NULL, "barber argument required");
-
-   if (barber->internal == NULL)
-      barber->internal = (char*)mem_alloc(skel_length + 1);
-
-   char tools[4];
-   tools[0] = (barber->tools & SCISSOR_TOOL) ? 'S' : '-',
-      tools[1] = (barber->tools & COMB_TOOL) ?    'C' : '-',
-      tools[2] = (barber->tools & RAZOR_TOOL) ?   'R' : '-',
-      tools[3] = '\0';
-
-   char* pos = (char*)"-";
-   if (barber->chairPosition >= 0)
-      pos = int2nstr(barber->chairPosition+1, 1);
-   else if (barber->basinPosition >= 0)
-      pos = int2nstr(barber->basinPosition+1, 1);
-
-   return gen_boxes(barber->internal, skel_length, skel,
-         int2nstr(barber->id, 2),
-         barber->clientID > 0 ? int2nstr(barber->clientID, 2) : "--",
-         tools, stateText[barber->state], pos);
 }

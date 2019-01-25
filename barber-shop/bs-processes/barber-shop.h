@@ -15,11 +15,9 @@
 #include "service.h"
 #include "client-benches.h"
 
-#ifndef debug_print(id, str)
 #define debug_print(id, str) \
    if (line_mode_logger())   \
    printf("%d%s\n", id, str)
-#endif
 
 typedef struct _BarberShop_
 {

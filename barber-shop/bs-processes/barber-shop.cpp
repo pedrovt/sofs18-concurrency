@@ -293,6 +293,26 @@ int num_available_barber_chairs(BarberShop* shop)
    return res;
 }
 
+int shop_opened(BarberShop *shop)
+{
+   require(shop != NULL, "shop argument required");
+
+   return shop->opened;
+}
+
+void close_shop(BarberShop *shop)
+{
+   require(shop != NULL, "shop argument required");
+   require(shop_opened(shop), "barber shop already closed");
+
+   shop->opened = 0;
+}
+
+static char *to_string_barber_shop(BarberShop *shop)
+{
+   return gen_boxes(shop->internal, skel_length, skel);
+}
+
 // #############################################################################
 // Functions to be changed/used in barber/client
 
@@ -467,12 +487,7 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
-// #############################################################################
-// #############################################################################
-// #############################################################################
-// #############################################################################
 // TODO
-// NOT BEING CALLED
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
@@ -524,51 +539,27 @@ int greet_barber(BarberShop* shop, int clientID)
 }
 
 // #############################################################################
-
-
-int shop_opened(BarberShop* shop)
-{
-   require (shop != NULL, "shop argument required");
-
-   return shop->opened;
-}
-
-void close_shop(BarberShop* shop)
-{
-   require (shop != NULL, "shop argument required");
-   require (shop_opened(shop), "barber shop already closed");
- 
-   shop->opened = 0;
-}
-
-static char* to_string_barber_shop(BarberShop* shop)
-{
-   return gen_boxes(shop->internal, skel_length, skel);
-}
-
-// #############################################################################
-// Get shop ids
+// Get semaphores id
 int get_shmid_id(BarberShop *shop)
 {
    require(shop != NULL, "shop argument required");
    return shop->shmid;
 }
 
+/* semaphores for mutual exclusion */
 int get_mtxid_id(BarberShop* shop)
 {
    require(shop != NULL, "shop argument required");
    return shop->mtxid;
 }
 
-
-/* semaphores for mutual exclusion */
 int get_mtx_clients_benches(BarberShop *shop)
 {
    require(shop != NULL, "shop argument required");
    return shop->mtx_clients_benches;
 }
 
-/* semaphores */
+/* semaphores for sync */
 int get_sem_num_clients_in_benches(BarberShop *shop)
 {
    require(shop != NULL, "shop argument required");
