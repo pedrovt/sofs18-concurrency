@@ -316,14 +316,14 @@ static void wait_its_turn(Client* client)
 
    /* wait for an empty seat (down semaphore with number of positions) */
    
-   /*int sem_val = psemctl(get_sem_num_benches_pos(client->shop), 0, GETVAL); // for debug purposes
+   /*int sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
    send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
    */
 
-   lock(get_sem_num_benches_pos(client->shop));
+   down(client -> shop -> sem_num_free_benches_pos);
 
    /*
-   sem_val = psemctl(get_sem_num_benches_pos(client->shop), 0, GETVAL); // for debug purposes
+   sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
    send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
    */
 
@@ -335,7 +335,7 @@ static void wait_its_turn(Client* client)
     * Critical zone: 2 clients trying to access the clients bench 
     * (lock-unlock to ensure safety) */
    debug_function_run_log(client -> logId, client -> id, "Critical zone! Going to lock");
-   lock(get_mtx_clients_benches(client->shop));                                  // ! LOCK
+   lock(client -> shop -> mtx_clients_benches);                                  // ! LOCK
    debug_function_run_log(client -> logId, client -> id, "After lock");
 
    log_client_benches(&client->shop->clientBenches);
@@ -344,11 +344,11 @@ static void wait_its_turn(Client* client)
 
    debug_function_run_log(client -> logId, client -> id, concat_2str("After enter barbershop, benches position is: ", int2str(benchesPosition)));
 
-   unlock(get_mtx_clients_benches(client->shop));                                // ! UNLOCK
+   unlock(client -> shop -> mtx_clients_benches);                                // ! UNLOCK
    send_log(client->logId, (char *)"[wait_its_turn] End of critical zone! after unlock");
 
    /* TODO up semaphore with number of clients in benches */
-   up(get_sem_num_clients_in_benches(client->shop));                         // ! UP
+   up(client -> shop -> sem_num_clients_in_benches);                         // ! UP
 
    client -> benchesPosition = benchesPosition;
    
@@ -375,15 +375,15 @@ static void rise_from_client_benches(Client* client)
 
    // TODO up semaphore with number of free positions
    /* update benches position semaphore */
-   unlock(get_sem_num_benches_pos(client->shop));
+   unlock(client -> shop -> sem_num_free_benches_pos);
 
    /* CRITICAL ZONE: remove client from client benches */
-   lock(get_mtx_clients_benches(client->shop));
+   lock(client -> shop -> mtx_clients_benches);
 
    rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
    client->benchesPosition = -1;    // Invalid position, ie not in the bench
 
-   unlock(get_mtx_clients_benches(client->shop));
+   unlock(client -> shop -> mtx_clients_benches);
 
    log_client(client);
 }

@@ -77,7 +77,7 @@ void shop_sems_create(BarberShop* shop)
    
    /* create sync semaphores */
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> sem_num_benches_pos	     = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_free_benches_pos	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_client_to_barber_ids   = psemget(IPC_PRIVATE, MAX_CLIENTS, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* initialize mutex semaphores */
@@ -89,17 +89,20 @@ void shop_sems_create(BarberShop* shop)
    /* initialize sync semaphores */
    //unlock(shop -> sem_num_clients_in_benches);
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
-      unlock(shop -> sem_num_benches_pos);
+      unlock(shop -> sem_num_free_benches_pos);
    }
 
    /* post-conditions for mutex semaphores */
-   ensure(shop -> mtx_shop != -1, "mtx_shop semaphore not created");
-   ensure(shop -> mtx_barber_benches  != -1, "mtx_barber_benches semaphore not created");
-   ensure(shop -> mtx_clients_benches != -1, "mtx_clients_benches semaphore not created");
+   // todo verify the correct pos condition
+   ensure(shop -> mtx_shop > 0, "mtx_shop semaphore not created");
+   ensure(shop -> mtx_barber_benches  > 0, "mtx_barber_benches semaphore not created");
+   ensure(shop -> mtx_clients_benches > 0, "mtx_clients_benches semaphore not created");
+   ensure(shop -> mtx_clients_to_barbers_ids > 0, "mtx_clients_to_barbers_ids semaphore not created");
 
    /* post-conditions for sync semaphores */
-   ensure(shop -> sem_num_clients_in_benches != -1, "sem_num_clients_in_benches semaphore not created");
-   ensure(shop -> sem_num_benches_pos != -1, "sem_num_benches_pos semaphore not created");
+   ensure(shop -> sem_num_clients_in_benches > 0, "sem_num_clients_in_benches semaphore not created");
+   ensure(shop -> sem_num_free_benches_pos > 0, "sem_num_benches_pos semaphore not created");
+   ensure(shop -> sem_client_to_barber_ids > 0, "sem_client_to_barber_ids semaphore not created");
 }
 
 /* semaphores destruction */
@@ -566,49 +569,3 @@ int greet_barber(BarberShop* shop, int clientID)
 
    return res;
 }
-
-// #############################################################################
-// Get semaphores id
-// TODO DEPRECATED. Remove them and use directly the field
-// DONT REMOVE YET! 
-
-int get_shmid_id(BarberShop *shop)
-{
-   require(shop != NULL, "shop argument required");
-   return shop->shmid;
-}
-
-/* semaphores for mutual exclusion */
-int get_mtx_shop(BarberShop* shop)
-{
-   require(shop != NULL, "shop argument required");
-   return shop->mtx_shop;
-}
-
-int get_mtx_barber_benches(BarberShop *shop)
-{
-   require(shop != NULL, "shop argument required");
-   return shop->mtx_barber_benches;
-}
-
-int get_mtx_clients_benches(BarberShop *shop)
-{
-   require(shop != NULL, "shop argument required");
-   return shop->mtx_clients_benches;
-}
-
-/* semaphores for sync */
-int get_sem_num_clients_in_benches(BarberShop *shop)
-{
-   require(shop != NULL, "shop argument required");
-   return shop->sem_num_clients_in_benches;
-}
-
-int get_sem_num_benches_pos(BarberShop *shop)
-{
-   require(shop != NULL, "shop argument required");
-   return shop->sem_num_benches_pos;
-}
-
-
-

@@ -68,7 +68,7 @@ typedef struct _BarberShop_
    
    /* sync semaphores */
    int sem_num_clients_in_benches;        // # clients	     in clients benches
-   int sem_num_benches_pos;               // # free positions in client benches
+   int sem_num_free_benches_pos;               // # free positions in client benches
    int sem_client_to_barber_ids;          // barbers to client ids
 
    /* other info */
@@ -130,13 +130,6 @@ void unlock(int id, int index);
 void down(int id, int index);
 void up(int id, int index);
 
-/* semaphores for mutual exclusion */
-int get_mtx_shop(BarberShop *shop);
-int get_mtx_barber_benches(BarberShop *shop);
-int get_mtx_clients_benches(BarberShop *shop);
 
-/* semaphores for synchronization */
-int get_sem_num_clients_in_benches(BarberShop *shop);
-int get_sem_num_benches_pos(BarberShop *shop);
 
 #endif
