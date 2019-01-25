@@ -15,9 +15,18 @@
 #include "service.h"
 #include "client-benches.h"
 
+/* for debugging purposes only */ 
 #define debug_print(id, str) \
    if (line_mode_logger())   \
    printf("%d%s\n", id, str)
+
+#define debug_log(id, str) \
+   if (line_mode_logger())   \
+   send_log(id, str)
+
+#define debug_function_run_log(id, entityid, str) \
+   if (line_mode_logger())   \
+   send_log(id, concat_6str("[", __FUNCTION__, "] ", int2str(entityid), " ", str))
 
 typedef struct _BarberShop_
 {
@@ -48,17 +57,20 @@ typedef struct _BarberShop_
    int logId;
    char* internal;
 
-   /* our info */
-   /* shared memory and semaphores */
+   /* shared memory */
    int shmid;
-   int mtxid;                       // barbershop
-   int mtx_clients_benches;         // client benches
-   int sem_num_clients_in_benches;  // number client in benches
-   int sem_num_benches_pos = -1;    // number free positions in client benches
+   
+   /* mutex semaphores */
+   int mtx_shop;                          // barbershop
+   int mtx_barber_benches;                // barber benches
+   int mtx_clients_benches;               // client benches
+   
+   /* sync semaphores */
+   int sem_num_clients_in_benches;        // # clients	     in clients benches
+   int sem_num_benches_pos;               // # free positions in client benches
 
    /* other info */
-   int numActiveClients;
-   int barber_to_client_ids[MAX_BARBERS];
+   int barber_to_client_ids[MAX_CLIENTS]; // client ID -> barber ID 
 
 } BarberShop;
 
@@ -106,11 +118,13 @@ void shop_disconnect(BarberShop *shop);
 
 /* auxiliar functions for semaphores */
 void shop_sems_create(BarberShop *shop);
+void shop_sems_destroy(BarberShop *shop);
 void lock(int id);
 void unlock(int id);
 
 /* semaphores for mutual exclusion */
-int get_mtxid_id(BarberShop *shop);
+int get_mtx_shop(BarberShop *shop);
+int get_mtx_barber_benches(BarberShop *shop);
 int get_mtx_clients_benches(BarberShop *shop);
 
 /* semaphores for synchronization */

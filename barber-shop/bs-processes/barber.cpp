@@ -192,21 +192,30 @@ static void sit_in_barber_bench(Barber* barber)
    /** TODO:
     * 1: sit in a random empty seat in barber bench (always available)
     **/
-
-   // !Critical zone: 2 barbers trying to seat in the same bench
-
-   psem_down(accessrc, 0);
+   int sem_val = psemctl(barber -> shop -> mtx_barber_benches, 0, GETVAL);  
+   debug_function_run_log(barber -> logId, barber -> id, concat_2str("sem value is", int2str(sem_val)));
    
+   lock(get_mtx_barber_benches(barber -> shop));         // <- bug
    require (barber != NULL, "barber argument required");
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
    require (!seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber already seated in barber shop");
 
-   barber -> benchPosition = random_sit_in_barber_bench(barber_bench(barber -> shop), barber -> id);
-
-   ensure ((barber -> benchPosition) >= 0, "invalid barber bench position");
+   /* sit in a random empty seat 
+    * Critical zone: 2 barbers trying to seat in the same bench
+    * (lock-unlock to ensure safety) */
    
-   psem_up(accessrc, 0);
-   log_barber(barber);
+   debug_function_run_log(barber -> logId, barber -> id, "Before random sit");
+   int benchPosition = random_sit_in_barber_bench(barber_bench(barber -> shop), barber -> id);
+   debug_function_run_log(barber -> logId, barber -> id, "After random sit");
+   
+   log_barber_bench(barber_bench(barber -> shop));
+   unlock(get_mtx_barber_benches(barber -> shop));
+
+   barber -> benchPosition = benchPosition;
+
+   debug_function_run_log(barber -> logId, barber -> id, "Barber sat down in barber benches");
+   ensure ((barber -> benchPosition) > 0, "invalid barber bench position");
+   ensure (seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber must be seated in barber shop");
 }
 
 // TODO
@@ -218,7 +227,7 @@ static void wait_for_client(Barber* barber)
     * 2: get next client from client benches (if empty, wait) (also, it may be required to check for simulation termination)
     * 3: receive and greet client (receive its requested services, and give back the barber's id)
     **/
-   
+
    require (barber != NULL, "barber argument required");
    send_log(barber->logId, concat_2str(int2str(barber->id)," [wait_for_client]"));
    

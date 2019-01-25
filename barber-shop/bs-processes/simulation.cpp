@@ -39,7 +39,10 @@ static void initSimulation();
 static pid_t allBarbersIds[MAX_BARBERS];
 static pid_t allClientsIds[MAX_CLIENTS];
 
-/* given functions */
+// #############################################################################
+// Given functions
+// Might need to be changed
+
 int main(int argc, char* argv[])
 {
    // default parameter values:
@@ -154,8 +157,9 @@ static void finish()
       // printf("Process %d returned\n", allClientsIds[i]);
    }
 
-   //shop_disconnect(shop);
-   //shop_destroy(shop);
+   //shop_sems_destroy(shop);
+   shop_disconnect(shop);
+   shop_destroy(shop);
    //term_logger();
 }
 
@@ -163,7 +167,7 @@ static void initSimulation()
 {
    /* TODO: change this function to your needs */
    
-   /* our shared info */
+   /* shared data structure (barbershop) */
    shop_create();
    shop = shop_connect();
 
@@ -176,7 +180,9 @@ static void initSimulation()
                     global->NUM_SCISSORS, global->NUM_COMBS, global->NUM_RAZORS, global->NUM_WASHBASINS,
                     global->NUM_CLIENT_BENCHES_SEATS, global->NUM_CLIENT_BENCHES);
    
+   /* semaphores */
    shop_sems_create(shop);
+
    char* descText;
    descText = (char*)"Barbers:";
    char* translationsBarbers[] = {
@@ -201,6 +207,7 @@ static void initSimulation()
 }
 
 /*********************************************************************/
+// Given functions
 // No need to change remaining code!
 
 static void help(char* prog, Parameters *params)

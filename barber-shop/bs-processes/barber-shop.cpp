@@ -51,23 +51,31 @@ void shop_sems_create(BarberShop* shop)
    require(shop != NULL, "shop argument required");
 
    /* create mutex semaphores */
-   shop -> mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_shop = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_barber_benches  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* create sync semaphores */
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_benches_pos = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
-   /* initialize semaphores */
-   unlock(shop -> mtxid);
+   /* initialize mutex semaphores */
+   unlock(shop -> mtx_shop);
+   unlock(shop -> mtx_barber_benches);
    unlock(shop -> mtx_clients_benches);
+   
+   /* initialize sync semaphores */
    unlock(shop -> sem_num_clients_in_benches);
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
       unlock(shop -> sem_num_benches_pos);
    }
 
-   ensure(shop -> mtxid != -1, "mtxid semaphore not created");
+   /* post-conditions for mutex semaphores */
+   ensure(shop -> mtx_shop != -1, "mtx_shop semaphore not created");
+   ensure(shop -> mtx_barber_benches  != -1, "mtx_barber_benches semaphore not created");
    ensure(shop -> mtx_clients_benches != -1, "mtx_clients_benches semaphore not created");
+
+   /* post-conditions for sync semaphores */
    ensure(shop -> sem_num_clients_in_benches != -1, "sem_num_clients_in_benches semaphore not created");
    ensure(shop -> sem_num_benches_pos != -1, "sem_num_benches_pos semaphore not created");
 }
@@ -75,10 +83,11 @@ void shop_sems_create(BarberShop* shop)
 /* semaphores destruction */
 void shop_sems_destroy(BarberShop* shop) 
 {
-   psemctl(shop -> mtxid, 0, IPC_RMID, NULL);
+   /*psemctl(shop -> mtx_shop, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_benches_pos, 0, IPC_RMID, NULL);
+   */
 }
 
 // #############################################################################
@@ -165,9 +174,6 @@ void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
    for(int i = 0; i < MAX_CLIENTS; i++)
       shop->clientsInside[i] = 0;
    shop->opened = 1;
-
-   /* our info */
-   shop->numActiveClients = global -> NUM_CLIENTS;
 
    gen_rect(skel, skel_length, num_lines_barber_shop(shop), num_columns_barber_shop(shop), 0xF, 1);
    gen_overlap_boxes(skel, 0, skel,
@@ -315,8 +321,6 @@ static char *to_string_barber_shop(BarberShop *shop)
 
 // #############################################################################
 // Functions to be changed/used in barber/client
-
-
 int reserve_random_empty_barber_chair(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -340,6 +344,7 @@ int reserve_random_empty_barber_chair(BarberShop* shop, int barberID)
    return res;
 }
 
+// TODO might have to be changed
 int num_available_washbasin(BarberShop* shop)
 {
    require (shop != NULL, "shop argument required");
@@ -352,7 +357,7 @@ int num_available_washbasin(BarberShop* shop)
    return res;
 }
 
-// ?might have to be called
+// TODO might have to be changed
 int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -376,6 +381,7 @@ int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
    return res;
 }
 
+// TODO might have to be changed
 int is_client_inside(BarberShop* shop, int clientID)
 {
    require (shop != NULL, "shop argument required");
@@ -399,12 +405,12 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   lock(shop->mtxid);
+   lock(shop->mtx_shop);
    while (service_used(&services[barberID - 1]))
       ;
    Service res = services[barberID - 1];
    used_service(&services[barberID - 1], 1);
-   unlock(shop->mtxid);
+   unlock(shop->mtx_shop);
 
    return res;
 }
@@ -416,10 +422,10 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   lock(shop->mtxid);
+   lock(shop->mtx_shop);
    services[service_barber_id(&service) - 1] = service;
    used_service(&services[service_barber_id(&service) - 1], 0);
-   unlock(shop->mtxid);
+   unlock(shop->mtx_shop);
 
    require (shop != NULL, "shop argument required");
 
@@ -437,7 +443,7 @@ void client_done(BarberShop* shop, int clientID)
 
 }
 
-// ? might need to be called
+// TODO might have to be changed
 int enter_barber_shop(BarberShop* shop, int clientID, int request)
 {
    /** TODO:
@@ -467,7 +473,7 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    return res;
 }
 
-// ? might need to be called
+// TODO might have to be changed
 void leave_barber_shop(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -502,17 +508,16 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    
    send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
 
-   lock(get_mtxid_id(shop));
+   lock(get_mtx_shop(shop));
    // TODO semaphore
    shop -> barber_to_client_ids[clientID] = barberID;
-   unlock(get_mtxid_id(shop));
+   unlock(get_mtx_shop(shop));
 
    send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
 
 }
 
 // TODO 
-// !HAS BUGS
 int greet_barber(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -525,10 +530,10 @@ int greet_barber(BarberShop* shop, int clientID)
    int res = 0;
 
    send_log(shop->logId, (char*)"[greet_barber] before lock");
-   lock(get_mtxid_id(shop));
+   lock(get_mtx_shop(shop));
    res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
 
-   unlock(get_mtxid_id(shop));
+   unlock(get_mtx_shop(shop));
    send_log(shop->logId, (char*)"[greet_barber] after lock");
 
    send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
@@ -540,6 +545,9 @@ int greet_barber(BarberShop* shop, int clientID)
 
 // #############################################################################
 // Get semaphores id
+// TODO DEPRECATED. Remove them and use directly the field
+// DONT REMOVE YET! 
+
 int get_shmid_id(BarberShop *shop)
 {
    require(shop != NULL, "shop argument required");
@@ -547,10 +555,16 @@ int get_shmid_id(BarberShop *shop)
 }
 
 /* semaphores for mutual exclusion */
-int get_mtxid_id(BarberShop* shop)
+int get_mtx_shop(BarberShop* shop)
 {
    require(shop != NULL, "shop argument required");
-   return shop->mtxid;
+   return shop->mtx_shop;
+}
+
+int get_mtx_barber_benches(BarberShop *shop)
+{
+   require(shop != NULL, "shop argument required");
+   return shop->mtx_barber_benches;
 }
 
 int get_mtx_clients_benches(BarberShop *shop)
