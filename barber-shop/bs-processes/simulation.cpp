@@ -103,7 +103,7 @@ static void go()
 
       // Child side: run Routine
       if (id == 0) {
-         shop_connect(barber->shop);
+         barber->shop=shop_connect();
          main_barber(barber);
          shop_disconnect(barber->shop);
       }
@@ -122,9 +122,9 @@ static void go()
       
       // Child side: run Routine
       if (id == 0) {
-         shop_connect(client->shop);
+         client -> shop = shop_connect();
          main_client(client);
-         shop_disconnect(client->shop);
+         shop_disconnect(shop);
       }
    }
 }
@@ -164,8 +164,8 @@ static void initSimulation()
    /* TODO: change this function to your needs */
    
    /* our shared info */
-   shop_create(shop);
-   shop_connect(shop);
+   shop_create();
+   shop = shop_connect();
 
    srand(time(NULL));
    init_process_logger();

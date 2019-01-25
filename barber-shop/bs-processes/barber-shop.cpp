@@ -60,22 +60,22 @@ void shop_sems_create(BarberShop *shop)
 }
 
 /* auxiliar functions for shared memory structure (the barbershop) */
-void shop_create(BarberShop* shop)
+void shop_create()
 {
    /* create the shared memory */
    shmid = pshmget(IPC_PRIVATE, sizeof(BarberShop), 0600 | IPC_CREAT | IPC_EXCL);
    
-   /* attach shared memory to process addressing space */
-   shop = (BarberShop*) pshmat(shmid, NULL, 0);
-   ensure(shop != NULL, "shared data structure can't be null");
 }
 
-void shop_connect(BarberShop* shop)
+BarberShop* shop_connect()
 {  
    //printf("\n[shop_connect] Connecting to %d...", shmid);
 
    /* attach shared memory to process addressing space */
-   shop = (BarberShop*) pshmat(shmid, NULL, 0);
+   BarberShop *shop = (BarberShop *)pshmat(shmid, NULL, 0);
+   ensure(shop != NULL, "shared data structure can't be null");
+
+   return shop;
 
    //printf("\n[shop_connected] Connected sucessfully");
 }
@@ -411,7 +411,7 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
     * Function called from a client when entering the barbershop
     **/
 
-   
+   //printf("\n\n\n\n\n\n\n---------------------\n\n\n\nHELLO ENTER BARBER SHOP");
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
@@ -419,9 +419,18 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require(num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
+   //send_log(shop->logId, concat_2str("\nBEFORE RANDOM SIT\nQUEUE SIZE IN ENTER BARBER SHOP? ", int2str(shop->clientBenches.queue.size)));
+   //printf("\nRANDOM SIT");
+
+   //log_client_benches(&shop->clientBenches);
+
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
+   
+   //send_log(shop->logId, concat_2str("\nAFTER RANDOM SIT\nQUEUE SIZE IN ENTER BARBER SHOP? ", int2str(shop->clientBenches.queue.size)));
+
    shop -> clientsInside[shop->numClientsInside++] = clientID;
    
+
    return res;
 }
 

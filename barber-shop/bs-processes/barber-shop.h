@@ -15,6 +15,12 @@
 #include "service.h"
 #include "client-benches.h"
 
+#ifndef debug_print(id, str)
+#define debug_print(id, str) \
+   if (line_mode_logger())   \
+   printf("%d%s\n", id, str)
+#endif
+
 typedef struct _BarberShop_
 {
    int numBarbers;
@@ -95,9 +101,9 @@ int shop_opened(BarberShop* shop);
 void close_shop(BarberShop* shop); // no more outside clients accepted
 
 /* auxiliar functions for shared memory structure (the barbershop) */
-void shop_create(BarberShop *shop);
+void shop_create();
 void shop_destroy(BarberShop *shop);
-void shop_connect(BarberShop *shop);
+BarberShop* shop_connect();
 void shop_disconnect(BarberShop *shop);
 
 /* auxiliar functions for semaphores */

@@ -88,9 +88,17 @@ int random_sit_in_client_benches(ClientBenches* benches, int id, int request)
    int res;
    res = random_empty_seat_position_client_benches(benches);
    RQItem item = {id, res, request, 0};
+   
+   //printf("\n\n\n\n\nCLIENT ID IS %d REQUEST %d", id, request);
+   //printf("\nQUEUE SIZE? %d", benches->queue.size);
+
    benches->id[res] = id;
    benches->request[res] = request;
    benches->order[res] = in_client_queue(&benches->queue, item);
+
+   //printf("\nQUEUE SIZE AFTER ADDING? %d", benches->queue.size);
+   //printf("\n\n\n\n\n");
+
    log_client_benches(benches);
    return res;
 }

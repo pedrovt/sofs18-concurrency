@@ -187,7 +187,7 @@ static void wait_for_client(Barber* barber)
     **/
    
    require (barber != NULL, "barber argument required");
-   send_log(barber->logId, (char*)"[wait_for_client]");
+   send_log(barber->logId, concat_2str(int2str(barber->id)," [wait_for_client]"));
    
    /* 1. set the client state */
    barber -> state = WAITING_CLIENTS;
@@ -198,12 +198,12 @@ static void wait_for_client(Barber* barber)
        * TODO: down semaphore with number of clients
        */
       int sem_val = psemctl(get_sem_num_clients_in_benches(barber->shop), 0, GETVAL);  // for debug purposes
-      send_log(barber->logId, concat_2str("[wait_for_client] #clients in benches is: ", int2str(sem_val)));
+      send_log(barber->logId, concat_3str(int2str(barber->id)," [wait_for_client] #clients in benches is: ", int2str(sem_val)));
 
       lock(get_sem_num_clients_in_benches(barber->shop));
 
       sem_val = psemctl(get_sem_num_clients_in_benches(barber->shop), 0, GETVAL);      // for debug purposes
-      send_log(barber->logId, concat_2str("[wait_for_client] There is a client! #clients in benches is now ", int2str(sem_val)));
+      send_log(barber->logId, concat_3str(int2str(barber->id)," [wait_for_client] There is a client! #clients in benches is now ", int2str(sem_val)));
 
       /* when the code reaches this point, we know there is
        * at least 1 client */
@@ -215,15 +215,23 @@ static void wait_for_client(Barber* barber)
       send_log(barber->logId, (char *)"[wait_for_client] Critical zone! Going to lock");
       lock(get_mtx_clients_benches(barber->shop));
       send_log(barber->logId, (char*)"[wait_for_client] After lock");
-   
+
+      send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Is shop the right shop? What is the number of barbers?  ", int2str(barber->shop->numBarbers)));
+
+      ClientBenches* benches = client_benches(barber -> shop);
+      ClientQueue benches_queue = benches -> queue;
+      printf("\n\n\n\n\n\n\n\nIMPORTANT LOG\n\n\n\n");
+      log_client_benches(&barber->shop->clientBenches);
+      send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Client Benches queue is empty? ", int2str(empty_client_queue(&benches_queue))));
+
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
       
-      send_log(barber->logId, concat_2str("[wait_for_client] After next_client_in_benches, client id is: ", int2str(client.clientID)));
+      send_log(barber->logId, concat_3str(int2str(barber->id)," [wait_for_client] After next_client_in_benches, client id is: ", int2str(client.clientID)));
 
       unlock(get_mtx_clients_benches(barber->shop));
-      send_log(barber->logId, (char *)"[wait_for_client] End of Critical zone! After unlock");
+      send_log(barber->logId, concat_2str(int2str(barber->id)," [wait_for_client] End of Critical zone! After unlock"));
 
       /* 3. receive and greet client */ 
       receive_and_greet_client(barber->shop, barber->id, client.clientID);

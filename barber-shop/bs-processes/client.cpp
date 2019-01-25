@@ -302,8 +302,10 @@ static void wait_its_turn(Client* client)
    lock(get_mtx_clients_benches(client->shop));
    send_log(client->logId, (char*)"[wait_its_turn] After lock");
 
+   log_client_benches(&client->shop->clientBenches);
    int benchesPosition = enter_barber_shop(client->shop, client->id, client->requests);
-   
+   log_client_benches(&client->shop->clientBenches);
+
    send_log(client->logId, concat_2str("[wait_its_turn] After enter_barber_shop, benchesPosition is: ", int2str(benchesPosition)));
 
    unlock(get_mtx_clients_benches(client->shop));
@@ -315,7 +317,8 @@ static void wait_its_turn(Client* client)
    client -> benchesPosition = benchesPosition;
    
    /* 3. handshake with barber */
-   send_log(client->logId, (char*)"[wait_its_turn] going to greet barber");
+   send_log(client->logId, concat_3str(int2str(client->id), "[wait_for_client] Is shop the right shop? What is the number of barbers?  ", int2str(client->shop->numBarbers)));
+   send_log(client->logId, (char*)"[wait_its_turn] going to greet barber with client id");
    client -> barberID = greet_barber(client -> shop, client -> id);
    send_log(client->logId, (char*)"[wait_its_turn] greeted barber");
 
