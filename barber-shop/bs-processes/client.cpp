@@ -218,7 +218,6 @@ static void notify_client_death(Client* client)
 
 // #############################################################################
 // Functions to be developed
-// TODO until friday
 
 static void wandering_outside(Client* client)
 {
@@ -234,17 +233,12 @@ static void wandering_outside(Client* client)
    log_client(client);
 }
 
-// TODO confirm
 static int vacancy_in_barber_shop(Client* client)
 {
    /** TODO:
     * 1: set the client state to WAITING_BARBERSHOP_VACANCY
     * 2: check if there is an empty seat in the client benches (at this instante, later on it may fail)
     **/
-
-   // ! CRITICAL ZONE: While checking for an empty seat, someone else might sit!
-
-   // TODO Semaphore lock
    require (client != NULL, "client argument required");
 
    client -> state = WAITING_BARBERSHOP_VACANCY;
@@ -256,11 +250,9 @@ static int vacancy_in_barber_shop(Client* client)
 
    log_client(client);
 
-   // TODO Semaphore unlock
    return res;
 }
 
-// TODO confirm
 static void select_requests(Client* client)
 {
    /** TODO:
@@ -287,14 +279,12 @@ static void select_requests(Client* client)
    }
 
    if (client -> requests == 0) {
-      //select_requests(client);
       client -> requests = WASH_HAIR_REQ;
    }
    
-   check(((client->requests) >= 1 && (client->requests) <= 7), concat_2str("invalid client request ", int2str(client->requests)));
+   ensure(((client->requests) >= 1 && (client->requests) <= 7), concat_2str("invalid client request ", int2str(client->requests)));
    
    log_client(client);
-   printf("LEAVING REQUESTS");
 }
 
 static void wait_its_turn(Client* client)
@@ -319,7 +309,6 @@ static void wait_its_turn(Client* client)
    /*int sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
    send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
    */
-
    down(client -> shop -> sem_num_free_benches_pos);
 
    /*
@@ -373,11 +362,13 @@ static void rise_from_client_benches(Client* client)
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
 
-   // TODO up semaphore with number of free positions
-   /* update benches position semaphore */
-   unlock(client -> shop -> sem_num_free_benches_pos);
+   /* update # free positions in benches and number clients in benches semaphores */
+   up(client -> shop -> sem_num_free_benches_pos);
+   down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFY
 
-   /* CRITICAL ZONE: remove client from client benches */
+   /* remove client from client benches 
+    * Critical Zone: 2+ clients rising at the same time
+    */
    lock(client -> shop -> mtx_clients_benches);
 
    rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
@@ -386,6 +377,9 @@ static void rise_from_client_benches(Client* client)
    unlock(client -> shop -> mtx_clients_benches);
 
    log_client(client);
+
+   ensure (!seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," can't be seated in benches"));
+
 }
 
 // #############################################################################

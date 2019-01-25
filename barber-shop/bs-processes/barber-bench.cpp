@@ -153,12 +153,15 @@ int random_sit_in_barber_bench(BarberBench* bench, int id)
 
 void rise_barber_bench(BarberBench* bench, int pos)
 {
+
    require (bench != NULL, "bench argument required");
    require (pos >= 0 && pos < bench->numSeats, concat_5str("invalid bench position (", int2str(pos), " not in [0,", int2str(bench->numSeats), "[)"));
    require (bench_seat_occupied(bench, pos), concat_3str("barber bench sit ",int2str(pos)," is empty"));
 
    bench->id[pos] = 0;
    log_barber_bench(bench);
+
+   ensure (!bench_seat_occupied(bench, pos), concat_3str("barber bench sit ",int2str(pos)," is empty"));
 }
 
 int seated_in_barber_bench(BarberBench* bench, int id)

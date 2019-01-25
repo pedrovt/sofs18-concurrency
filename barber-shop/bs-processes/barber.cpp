@@ -280,7 +280,7 @@ static void wait_for_client(Barber* barber)
    }
 }
 
-// TODO after bug
+// TODO
 static int work_available(Barber* barber)
 {
    /** TODO:
@@ -289,6 +289,17 @@ static int work_available(Barber* barber)
    require (barber != NULL, "barber argument required");
    
    int res = 1;
+   /*if(shop_opened(barber -> shop)){
+      if(barber -> shop -> numClientsInside == 0){
+         spend() ???
+         res = 0;
+      }
+      else
+         res = 1;
+   }
+   else{
+      res = 0;
+   }*/
    /* todo
    lock(get_mxt_numActiveClients());
    res = (barber->shop->numActiveClients != 0) ? 1 : 0;
@@ -297,20 +308,27 @@ static int work_available(Barber* barber)
    return res;
 }
 
+
 static void rise_from_barber_bench(Barber* barber){
    /** TODO:
     * 1: rise from the seat of barber bench
     **/
 
-   // TODO critical zone? I don't think so, but confirm
    lock(barber -> shop -> mtx_barber_benches);                                   //! LOCK
 
    require (barber != NULL, "barber argument required");
    require (seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber not seated in barber shop");
 
+   debug_function_run_log(barber -> logId, barber -> id, "Going to rise from barber bench");
+   log_barber_bench(barber_bench(barber->shop));
+
    rise_barber_bench(barber_bench(barber->shop), barber->benchPosition);
    barber->benchPosition = -1; // Invalid position, ie not in the bench
+   
+   debug_function_run_log(barber -> logId, barber -> id, "Has risen from barber bench");
+   log_barber_bench(barber_bench(barber->shop));
 
+   unlock(barber -> shop -> mtx_barber_benches);                                 // !UNLOCK
    log_barber(barber);
 }
 
