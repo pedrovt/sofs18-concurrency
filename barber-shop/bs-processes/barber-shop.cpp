@@ -464,6 +464,7 @@ void client_done(BarberShop* shop, int clientID)
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
+   send_log(shop->logId,concat_3str("Client ",int2str(clientID), " is done"));
 
 }
 
