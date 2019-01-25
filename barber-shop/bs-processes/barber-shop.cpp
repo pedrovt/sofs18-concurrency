@@ -22,9 +22,8 @@ static int shmid = -1;
 static Service services[MAX_BARBERS];     // TODO move to barber-shop.h
 
 // #############################################################################
-
-
-/* auxiliar functions for semaphores */
+// Semaphores
+/* auxiliar functions for mutual exclusion semaphores */
 void unlock(int id)
 {
    psem_up(id, 0);
@@ -35,74 +34,83 @@ void lock(int id)
    psem_down(id, 0);
 }
 
-void shop_sems_create(BarberShop *shop)
+/* auxiliar functions for sync semaphores */
+void up(int id)
 {
-   /* create access lockers */
-   shop-> mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop-> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   psem_up(id, 0);
+}
 
-   /* create other semaphores */
-   shop->sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop->sem_num_benches_pos = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+void down(int id)
+{
+   psem_down(id, 0);
+}
 
-   /* unlock semaphores*/
-   unlock(shop->mtxid);
-   unlock(shop->mtx_clients_benches);
-   unlock(shop->sem_num_clients_in_benches);
+/* semaphores creation */
+void shop_sems_create(BarberShop* shop)
+{
+   require(shop != NULL, "shop argument required");
+
+   /* create mutex semaphores */
+   shop -> mtxid = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+
+   /* create sync semaphores */
+   shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_benches_pos = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+
+   /* initialize semaphores */
+   unlock(shop -> mtxid);
+   unlock(shop -> mtx_clients_benches);
+   unlock(shop -> sem_num_clients_in_benches);
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
-      unlock(shop->sem_num_benches_pos);
+      unlock(shop -> sem_num_benches_pos);
    }
 
-   ensure(shop->mtxid != -1, "mtxid semaphore not right");
-   ensure(shop->mtx_clients_benches != -1, "mtx_clients_benches semaphore not right");
-   ensure(shop->sem_num_clients_in_benches != -1, "sem_num_clients_in_benches semaphore not right");
-   ensure(shop->sem_num_benches_pos != -1, "sem_num_benches_pos semaphore not right");
+   ensure(shop -> mtxid != -1, "mtxid semaphore not created");
+   ensure(shop -> mtx_clients_benches != -1, "mtx_clients_benches semaphore not created");
+   ensure(shop -> sem_num_clients_in_benches != -1, "sem_num_clients_in_benches semaphore not created");
+   ensure(shop -> sem_num_benches_pos != -1, "sem_num_benches_pos semaphore not created");
 }
 
-/* auxiliar functions for shared memory structure (the barbershop) */
+/* semaphores destruction */
+void shop_sems_destroy(BarberShop* shop) 
+{
+   psemctl(shop -> mtxid, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_clients_benches, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_benches_pos, 0, IPC_RMID, NULL);
+}
+
+// #############################################################################
+// Shared memory structure (the barbershop)
+
+/* create the shared memory */
 void shop_create()
 {
-   /* create the shared memory */
    shmid = pshmget(IPC_PRIVATE, sizeof(BarberShop), 0600 | IPC_CREAT | IPC_EXCL);
-   
 }
 
+/* attach shared memory to process addressing space */
 BarberShop* shop_connect()
 {  
-   //printf("\n[shop_connect] Connecting to %d...", shmid);
-
-   /* attach shared memory to process addressing space */
-   BarberShop *shop = (BarberShop *)pshmat(shmid, NULL, 0);
+   BarberShop *shop = (BarberShop*) pshmat(shmid, NULL, 0);
    ensure(shop != NULL, "shared data structure can't be null");
 
    return shop;
-
-   //printf("\n[shop_connected] Connected sucessfully");
 }
 
+/* deattach shared memory to process addressing space */
 void shop_disconnect(BarberShop* shop)
 {
-   //pshmdt(shop);
-   //shop = NULL;
-}
-
-void shop_destroy(BarberShop* shop)
-{
-   /* destroy the semaphorees */
-   /*
-   psemctl(mtxid, 0, IPC_RMID, NULL);
-   psemctl(mtx_clients_benches, 0, IPC_RMID, NULL);
-   psemctl(sem_num_clients_in_benches, 0, IPC_RMID, NULL);
-   psemctl(sem_num_benches_pos, 0, IPC_RMID, NULL);
-   */
-
-   /* detach shared memory from process addressing space */
    /*
    pshmdt(shop);
    shop = NULL;
    */
+}
 
-   /* ask OS to destroy the shared memory */
+/* ask OS to destroy the shared memory */
+void shop_destroy(BarberShop* shop)
+{
    /*
    pshmctl(shmid, IPC_RMID, NULL);
    shmid = -1; 
@@ -110,6 +118,8 @@ void shop_destroy(BarberShop* shop)
 }
 
 // #############################################################################
+// Getters & other util functions 
+// No need to change these
 static char* to_string_barber_shop(BarberShop* shop);
 
 int num_lines_barber_shop(BarberShop* shop)
@@ -283,7 +293,10 @@ int num_available_barber_chairs(BarberShop* shop)
    return res;
 }
 
-// ?might have to be called
+// #############################################################################
+// Functions to be changed/used in barber/client
+
+
 int reserve_random_empty_barber_chair(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -511,9 +524,7 @@ int greet_barber(BarberShop* shop, int clientID)
 }
 
 // #############################################################################
-// #############################################################################
-// #############################################################################
-// #############################################################################
+
 
 int shop_opened(BarberShop* shop)
 {
@@ -535,6 +546,8 @@ static char* to_string_barber_shop(BarberShop* shop)
    return gen_boxes(shop->internal, skel_length, skel);
 }
 
+// #############################################################################
+// Get shop ids
 int get_shmid_id(BarberShop *shop)
 {
    require(shop != NULL, "shop argument required");
