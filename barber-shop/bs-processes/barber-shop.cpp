@@ -108,13 +108,16 @@ void shop_sems_create(BarberShop* shop)
 /* semaphores destruction */
 void shop_sems_destroy(BarberShop* shop) 
 {  
-   // TODO Complete
-   /*psemctl(shop -> mtx_shop, 0, IPC_RMID, NULL);
+   /* destroy mutex semaphores */
+   psemctl(shop -> mtx_shop, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_barber_benches , 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_benches, 0, IPC_RMID, NULL);
-   psemctl(shop -> mtx_clients_to_barbers_ids, 0)
+   psemctl(shop -> mtx_clients_to_barbers_ids, 0, IPC_RMID, NULL);
+   
+   /* destroy sync semaphores */
    psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
-   psemctl(shop -> sem_num_benches_pos, 0, IPC_RMID, NULL);
-   */
+   psemctl(shop -> sem_num_free_benches_pos, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_client_to_barber_ids, 0, IPC_RMID, NULL);
 }
 
 // #############################################################################
@@ -138,19 +141,15 @@ BarberShop* shop_connect()
 /* deattach shared memory to process addressing space */
 void shop_disconnect(BarberShop* shop)
 {
-   /*
    pshmdt(shop);
    shop = NULL;
-   */
 }
 
 /* ask OS to destroy the shared memory */
 void shop_destroy(BarberShop* shop)
 {
-   /*
    pshmctl(shmid, IPC_RMID, NULL);
    shmid = -1; 
-   */
 }
 
 // #############################################################################
