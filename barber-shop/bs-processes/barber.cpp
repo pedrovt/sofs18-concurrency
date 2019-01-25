@@ -151,7 +151,7 @@ static void life(Barber* barber)
    while(work_available(barber)) // no more possible clients and closes barbershop
    {
       rise_from_barber_bench(barber);
-      process_resquests_from_client(barber);
+      process_requests_from_client(barber);
       release_client(barber);
       sit_in_barber_bench(barber);
       wait_for_client(barber); 
@@ -280,7 +280,7 @@ static void wait_for_client(Barber* barber)
    }
 }
 
-// TODO
+// ? verify [finalization]
 static int work_available(Barber* barber)
 {
    /** TODO:
@@ -289,34 +289,21 @@ static int work_available(Barber* barber)
    require (barber != NULL, "barber argument required");
    
    int res = 1;
-   // if shop closed
-      // down do semáforo com # clientes nas benches
+   if (!shop_opened(barber -> shop)) {
+      /* down do semáforo com # clientes nas benches */
+      down(barber -> shop -> sem_num_clients_in_benches);
       
-      // LOCK
+      /* critical zone */
+      lock(barber -> shop -> mtx_clients_benches);	                              //! LOCK
+      
       // retirar elemento da fila 
-      // UNLOCK
+      RQItem client = next_client_in_benches(client_benches(barber->shop));
+      res = client.clientID;
 
-      // if empty element
-      // return 0
-   //else
-      // return 1
+      unlock(barber -> shop -> mtx_clients_benches);                             //! UNLOCK
 
-   /*if(shop_opened(barber -> shop)){
-      if(barber -> shop -> numClientsInside == 0){
-         spend() ???
-         res = 0;
-      }
-      else
-         res = 1;
-   }
-   else{
-      res = 0;
-   }*/
-   /* todo
-   lock(get_mxt_numActiveClients());
-   res = (barber->shop->numActiveClients != 0) ? 1 : 0;
-   unlock(get_mxt_numActiveClients());
-   */
+      ensure (res == 0, "Client benches MUST be empty at this point in the simulation");
+   } 
    return res;
 }
 
