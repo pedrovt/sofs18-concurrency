@@ -66,7 +66,7 @@ void shop_sems_create(BarberShop* shop)
    unlock(shop -> mtx_clients_benches);
    
    /* initialize sync semaphores */
-   unlock(shop -> sem_num_clients_in_benches);
+   //unlock(shop -> sem_num_clients_in_benches);
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
       unlock(shop -> sem_num_benches_pos);
    }
