@@ -186,18 +186,13 @@ static char *to_string_barber(Barber *barber)
 
 // #############################################################################
 // Functions to be developed
-// TODO until friday
 static void sit_in_barber_bench(Barber* barber)
 {
    /** TODO:
     * 1: sit in a random empty seat in barber bench (always available)
     **/
-   
-   debug_function_run_log(barber -> logId, barber-> id, concat_2str("VALUE HERE IS ", int2str(barber -> shop -> mtx_barber_benches)));
-   int sem_val = psemctl(barber -> shop -> mtx_barber_benches, 0, GETVAL);  
-   debug_function_run_log(barber -> logId, barber -> id, concat_2str("sem value is", int2str(sem_val)));
-   
-   lock(get_mtx_barber_benches(barber -> shop));         // <- bug
+   lock(barber -> shop -> mtx_barber_benches);                                   //! LOCK
+
    require (barber != NULL, "barber argument required");
    require (num_seats_available_barber_bench(barber_bench(barber->shop)) > 0, "seat not available in barber shop");
    require (!seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber already seated in barber shop");
@@ -205,23 +200,22 @@ static void sit_in_barber_bench(Barber* barber)
    /* sit in a random empty seat 
     * Critical zone: 2 barbers trying to seat in the same bench
     * (lock-unlock to ensure safety) */
-   
-   debug_function_run_log(barber -> logId, barber -> id, "Before random sit");
    int benchPosition = random_sit_in_barber_bench(barber_bench(barber -> shop), barber -> id);
-   debug_function_run_log(barber -> logId, barber -> id, "After random sit");
+   debug_function_run_log(barber -> logId, barber -> id, concat_2str("Critical Zone! After random sit result is: ", int2str(benchPosition)));
    
    log_barber_bench(barber_bench(barber -> shop));
-   unlock(get_mtx_barber_benches(barber -> shop));
+
+   unlock(barber -> shop -> mtx_barber_benches);                                 //! UNLOCK
 
    barber -> benchPosition = benchPosition;
 
-   debug_function_run_log(barber -> logId, barber -> id, "Barber sat down in barber benches");
-   ensure ((barber -> benchPosition) > 0, "invalid barber bench position");
+   ensure ((barber -> benchPosition) >= 0, "invalid barber bench position");
    ensure (seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber must be seated in barber shop");
+
+   debug_function_run_log(barber -> logId, barber -> id, "Barber sat down in barber benches");
 }
 
 // TODO
-//! BUGS
 static void wait_for_client(Barber* barber)
 {
    /** TODO:
@@ -231,23 +225,23 @@ static void wait_for_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
-   send_log(barber->logId, concat_2str(int2str(barber->id)," [wait_for_client]"));
+   debug_function_run_log(barber -> logId, barber -> id, "");
    
    /* 1. set the client state */
    barber -> state = WAITING_CLIENTS;
 
    /* check for simulation termination */
    if (barber-> shop -> opened) {
-      /* if empty, wait 
-       * TODO: down semaphore with number of clients
+      /* Pre-2: if empty, wait 
+       * down semaphore with number of clients
        */
-      int sem_val = psemctl(get_sem_num_clients_in_benches(barber->shop), 0, GETVAL);  // for debug purposes
-      send_log(barber->logId, concat_3str(int2str(barber->id)," [wait_for_client] #clients in benches is: ", int2str(sem_val)));
+      int sem_val = psemctl(barber -> shop -> sem_num_clients_in_benches, 0, GETVAL);  // for debug purposes
+      debug_function_run_log(barber -> logId, barber -> id, concat_2str("# clients in benches is: ", int2str(sem_val)));
 
-      lock(get_sem_num_clients_in_benches(barber->shop));
+      down(barber -> shop -> sem_num_clients_in_benches);                        // ! DOWN
 
-      sem_val = psemctl(get_sem_num_clients_in_benches(barber->shop), 0, GETVAL);      // for debug purposes
-      send_log(barber->logId, concat_3str(int2str(barber->id)," [wait_for_client] There is a client! #clients in benches is now ", int2str(sem_val)));
+      sem_val = psemctl(barber -> shop -> sem_num_clients_in_benches, 0, GETVAL);      // for debug purposes
+      debug_function_run_log(barber -> logId, barber -> id, concat_2str("There is a client! #clients in benches is now:  ", int2str(sem_val)));
 
       /* when the code reaches this point, we know there is
        * at least 1 client */
@@ -255,26 +249,27 @@ static void wait_for_client(Barber* barber)
       /* 2. get next client from client benches 
        * Critical zone: 2 barbers trying to access the clients queue 
        * (lock-unlock to ensure safety) */
-      
-      send_log(barber->logId, (char *)"[wait_for_client] Critical zone! Going to lock");
-      lock(get_mtx_clients_benches(barber->shop));
-      send_log(barber->logId, (char*)"[wait_for_client] After lock");
 
-      send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Is shop the right shop? What is the number of barbers?  ", int2str(barber->shop->numBarbers)));
+      debug_function_run_log(barber -> logId, barber -> id, "Critical zone! Going to lock");
+      lock(barber -> shop -> mtx_clients_benches);                              // ! LOCK
+      debug_function_run_log(barber -> logId, barber -> id, "Critical zone! After lock");
 
-      ClientBenches* benches = client_benches(barber -> shop);
-      ClientQueue benches_queue = benches -> queue;
-      printf("\n\n\n\n\n\n\n\nIMPORTANT LOG\n\n\n\n");
+      //send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Is shop the right shop? What is the number of barbers?  ", int2str(barber->shop->numBarbers)));
+      //ClientBenches* benches = client_benches(barber -> shop);
+      //ClientQueue benches_queue = benches -> queue;
+      //send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Client Benches queue is empty? ", int2str(empty_client_queue(&benches_queue))));
+
       log_client_benches(&barber->shop->clientBenches);
-      send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Client Benches queue is empty? ", int2str(empty_client_queue(&benches_queue))));
-
+      
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
       
-      send_log(barber->logId, concat_3str(int2str(barber->id)," [wait_for_client] After next_client_in_benches, client id is: ", int2str(client.clientID)));
+      log_client_benches(&barber->shop->clientBenches);
 
-      unlock(get_mtx_clients_benches(barber->shop));
+      debug_function_run_log(barber -> logId, barber -> id, concat_2str("Critical zone! After next_client_in_benches, client id is: ", int2str(client.clientID)));
+
+      unlock(barber -> shop -> mtx_clients_benches);                             // ! UNLOCK
       send_log(barber->logId, concat_2str(int2str(barber->id)," [wait_for_client] End of Critical zone! After unlock"));
 
       /* 3. receive and greet client */ 
@@ -290,7 +285,7 @@ static int work_available(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
    
-   int res = 0;
+   int res = 1;
    /* todo
    lock(get_mxt_numActiveClients());
    res = (barber->shop->numActiveClients != 0) ? 1 : 0;
@@ -305,6 +300,7 @@ static void rise_from_barber_bench(Barber* barber){
     **/
 
    // TODO critical zone? I don't think so, but confirm
+   lock(barber -> shop -> mtx_barber_benches);                                   //! LOCK
 
    require (barber != NULL, "barber argument required");
    require (seated_in_barber_bench(barber_bench(barber->shop), barber->id), "barber not seated in barber shop");

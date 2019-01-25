@@ -26,7 +26,7 @@
 
 #define debug_function_run_log(id, entityid, str) \
    if (line_mode_logger())   \
-   send_log(id, concat_6str("[", __FUNCTION__, "] ", int2str(entityid), " ", str))
+   send_log(id, concat_6str("#", int2str(entityid), " [", __FUNCTION__, "] ", str))
 
 typedef struct _BarberShop_
 {
@@ -121,6 +121,8 @@ void shop_sems_create(BarberShop *shop);
 void shop_sems_destroy(BarberShop *shop);
 void lock(int id);
 void unlock(int id);
+void down(int id);
+void up(int id);
 
 /* semaphores for mutual exclusion */
 int get_mtx_shop(BarberShop *shop);
