@@ -297,7 +297,6 @@ static void select_requests(Client* client)
    printf("LEAVING REQUESTS");
 }
 
-// TODO finish friday
 static void wait_its_turn(Client* client)
 {
    /** TODO:
@@ -308,7 +307,7 @@ static void wait_its_turn(Client* client)
 
    require (client != NULL, "client argument required");
 
-   send_log(client->logId, int2str(client->id));
+   debug_function_run_log(client -> logId, client -> id, "");
 
    /* 1. set the client state */
    client -> state = WAITING_ITS_TURN;
@@ -316,48 +315,51 @@ static void wait_its_turn(Client* client)
    /* 2. enter barbershop */
 
    /* wait for an empty seat (down semaphore with number of positions) */
-   int sem_val = psemctl(get_sem_num_benches_pos(client->shop), 0, GETVAL); // for debug purposes
+   
+   /*int sem_val = psemctl(get_sem_num_benches_pos(client->shop), 0, GETVAL); // for debug purposes
    send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
+   */
 
    lock(get_sem_num_benches_pos(client->shop));
 
+   /*
    sem_val = psemctl(get_sem_num_benches_pos(client->shop), 0, GETVAL); // for debug purposes
    send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
-
-   send_log(client->logId, (char*)"[wait_its_turn] Free position available");
+   */
 
    /* when the code reaches this point, we know there is
     * at least 1 free position in the client benches */
+   debug_function_run_log(client -> logId, client -> id, "Free position available");
 
    /* get position in benches. 
     * Critical zone: 2 clients trying to access the clients bench 
     * (lock-unlock to ensure safety) */
-   
-   send_log(client->logId, (char *)"[wait_its_turn] Critical zone! Going to lock");
-   lock(get_mtx_clients_benches(client->shop));
-   send_log(client->logId, (char*)"[wait_its_turn] After lock");
+   debug_function_run_log(client -> logId, client -> id, "Critical zone! Going to lock");
+   lock(get_mtx_clients_benches(client->shop));                                  // ! LOCK
+   debug_function_run_log(client -> logId, client -> id, "After lock");
 
    log_client_benches(&client->shop->clientBenches);
    int benchesPosition = enter_barber_shop(client->shop, client->id, client->requests);
    log_client_benches(&client->shop->clientBenches);
 
-   send_log(client->logId, concat_2str("[wait_its_turn] After enter_barber_shop, benchesPosition is: ", int2str(benchesPosition)));
+   debug_function_run_log(client -> logId, client -> id, concat_2str("After enter barbershop, benches position is: ", int2str(benchesPosition)));
 
-   unlock(get_mtx_clients_benches(client->shop));
+   unlock(get_mtx_clients_benches(client->shop));                                // ! UNLOCK
    send_log(client->logId, (char *)"[wait_its_turn] End of critical zone! after unlock");
 
    /* TODO up semaphore with number of clients in benches */
-   unlock(get_sem_num_clients_in_benches(client->shop));
+   up(get_sem_num_clients_in_benches(client->shop));                         // ! UP
 
    client -> benchesPosition = benchesPosition;
    
    /* 3. handshake with barber */
-   send_log(client->logId, concat_3str(int2str(client->id), "[wait_for_client] Is shop the right shop? What is the number of barbers?  ", int2str(client->shop->numBarbers)));
-   send_log(client->logId, (char*)"[wait_its_turn] going to greet barber with client id");
-   client -> barberID = greet_barber(client -> shop, client -> id);
-   send_log(client->logId, (char*)"[wait_its_turn] greeted barber");
+   debug_function_run_log(client -> logId, client -> id, concat_2str("Going to greet barber with client id", int2str(client -> id)));
 
-   ensure((client->barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
+   client -> barberID = greet_barber(client -> shop, client -> id);
+   
+   debug_function_run_log(client -> logId, client -> id, concat_2str("Gretted barber. Barber ID is: ", int2str(client -> barberID)));
+   
+   ensure((client -> barberID) > 0, concat_3str("invalid barber id (", int2str(client->barberID), ")"));
    
    log_client(client);
 }

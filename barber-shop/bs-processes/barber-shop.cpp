@@ -29,20 +29,39 @@ void unlock(int id)
    psem_up(id, 0);
 }
 
+void unlock(int id, int index)
+{
+   psem_up(id, index);
+}
+
 void lock(int id)
 {
    psem_down(id, 0);
 }
 
-/* auxiliar functions for sync semaphores */
+void lock(int id, int index)
+{
+   psem_down(id, index);
+}
+
 void up(int id)
 {
    psem_up(id, 0);
 }
 
+void up(int id, int index)
+{
+   psem_up(id, index);
+}
+
 void down(int id)
 {
    psem_down(id, 0);
+}
+
+void down(int id, int index)
+{
+   psem_down(id, index);
 }
 
 /* semaphores creation */
@@ -54,16 +73,18 @@ void shop_sems_create(BarberShop* shop)
    shop -> mtx_shop = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_barber_benches  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-
-   printf("VALUE IN CREATION IS %d\n", shop -> mtx_barber_benches);
+   shop -> mtx_clients_to_barbers_ids = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   
    /* create sync semaphores */
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> sem_num_benches_pos = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_benches_pos	     = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_client_to_barber_ids   = psemget(IPC_PRIVATE, MAX_CLIENTS, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* initialize mutex semaphores */
    unlock(shop -> mtx_shop);
    unlock(shop -> mtx_barber_benches);
    unlock(shop -> mtx_clients_benches);
+   unlock(shop -> mtx_clients_to_barbers_ids);
    
    /* initialize sync semaphores */
    //unlock(shop -> sem_num_clients_in_benches);
@@ -83,9 +104,11 @@ void shop_sems_create(BarberShop* shop)
 
 /* semaphores destruction */
 void shop_sems_destroy(BarberShop* shop) 
-{
+{  
+   // TODO Complete
    /*psemctl(shop -> mtx_shop, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_benches, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_clients_to_barbers_ids, 0)
    psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_benches_pos, 0, IPC_RMID, NULL);
    */
@@ -505,16 +528,16 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   // !Critical area. A client can be trying to greet a barber
-   
    send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
-
-   lock(get_mtx_shop(shop));
-   // TODO semaphore
+   
+   // !Critical area. A client can be trying to greet a barber
+   lock(shop -> mtx_clients_to_barbers_ids);                                  // !LOCK
    shop -> barber_to_client_ids[clientID] = barberID;
-   unlock(get_mtx_shop(shop));
-
+   unlock(shop -> mtx_clients_to_barbers_ids);                                // !UNLOCK
+   
    send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
+   
+   up(shop -> sem_client_to_barber_ids, clientID);
 
 }
 
@@ -528,17 +551,16 @@ int greet_barber(BarberShop* shop, int clientID)
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
+   down(shop -> sem_client_to_barber_ids, clientID);
    int res = 0;
-
    send_log(shop->logId, (char*)"[greet_barber] before lock");
-   lock(get_mtx_shop(shop));
+   lock(shop -> mtx_clients_to_barbers_ids);                                  // !LOCK                    
    res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
 
-   unlock(get_mtx_shop(shop));
+   unlock(shop -> mtx_clients_to_barbers_ids);                                // !UNLOCK 
    send_log(shop->logId, (char*)"[greet_barber] after lock");
 
    send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
-
    ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
 
    return res;
