@@ -289,6 +289,18 @@ static int work_available(Barber* barber)
    require (barber != NULL, "barber argument required");
    
    int res = 1;
+   // if shop closed
+      // down do semáforo com # clientes nas benches
+      
+      // LOCK
+      // retirar elemento da fila 
+      // UNLOCK
+
+      // if empty element
+      // return 0
+   //else
+      // return 1
+
    /*if(shop_opened(barber -> shop)){
       if(barber -> shop -> numClientsInside == 0){
          spend() ???
@@ -494,6 +506,7 @@ static void process_requests_from_client(Barber* barber)
    ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
+// TODO VERIFY
 static void release_client(Barber* barber)
 {
    /** TODO:
@@ -502,6 +515,7 @@ static void release_client(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
+   // SYNC, MUTEX?
    // notify a client that all its services are done
    // function from barber-shop module
    client_done(barber->shop, barber->clientID);

@@ -143,12 +143,6 @@ static void finish()
    int allBarbersStatus[global->NUM_BARBERS];
    int allClientsStatus[global->NUM_CLIENTS];
 
-   // printf("Waiting for barber processes to return\n");
-   for (int i = 0; i < global->NUM_BARBERS; i++)
-   {
-      pwaitpid(allBarbersIds[i], &allBarbersStatus[i], 0);
-      // printf("Process %d returned\n", allBarbersIds[i]);
-   }
 
    // printf("Waiting for clients processes to return\n");
    for (int i = 0; i < global->NUM_CLIENTS; i++)
@@ -157,6 +151,14 @@ static void finish()
       // printf("Process %d returned\n", allClientsIds[i]);
    }
 
+   // TODO UP NUM_BARBERS of semaphore num clients in benches
+
+   // printf("Waiting for barber processes to return\n");
+   for (int i = 0; i < global->NUM_BARBERS; i++)
+   {
+      pwaitpid(allBarbersIds[i], &allBarbersStatus[i], 0);
+      // printf("Process %d returned\n", allBarbersIds[i]);
+   }
    //shop_sems_destroy(shop);
    shop_disconnect(shop);
    shop_destroy(shop);
