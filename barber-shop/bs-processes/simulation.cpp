@@ -175,7 +175,7 @@ static void initSimulation()
    init_process_logger();
    logger_filter_out_boxes();
 
-   shop = (BarberShop*)mem_alloc(sizeof(BarberShop));
+   //shop = (BarberShop*)mem_alloc(sizeof(BarberShop));
    init_barber_shop(shop, global->NUM_BARBERS, global->NUM_BARBER_CHAIRS,
                     global->NUM_SCISSORS, global->NUM_COMBS, global->NUM_RAZORS, global->NUM_WASHBASINS,
                     global->NUM_CLIENT_BENCHES_SEATS, global->NUM_CLIENT_BENCHES);

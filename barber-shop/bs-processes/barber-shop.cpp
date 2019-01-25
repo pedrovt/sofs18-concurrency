@@ -55,6 +55,7 @@ void shop_sems_create(BarberShop* shop)
    shop -> mtx_barber_benches  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
+   printf("VALUE IN CREATION IS %d\n", shop -> mtx_barber_benches);
    /* create sync semaphores */
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_benches_pos = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);

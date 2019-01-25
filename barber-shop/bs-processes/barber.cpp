@@ -192,6 +192,8 @@ static void sit_in_barber_bench(Barber* barber)
    /** TODO:
     * 1: sit in a random empty seat in barber bench (always available)
     **/
+   
+   debug_function_run_log(barber -> logId, barber-> id, concat_2str("VALUE HERE IS ", int2str(barber -> shop -> mtx_barber_benches)));
    int sem_val = psemctl(barber -> shop -> mtx_barber_benches, 0, GETVAL);  
    debug_function_run_log(barber -> logId, barber -> id, concat_2str("sem value is", int2str(sem_val)));
    
