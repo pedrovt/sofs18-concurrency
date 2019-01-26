@@ -281,7 +281,7 @@ static int work_available(Barber* barber)
    
    int res = 1;
    if (!shop_opened(barber -> shop)) {
-      /* down do semáforo com # clientes nas benches */
+      /* down do semaforo com # clientes nas benches */
       down(barber -> shop -> sem_num_clients_in_benches);
       
       /* critical zone */
@@ -365,12 +365,12 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = WAITING_WASHBASIN;
             log_barber(barber); //confirm if it's the best place 
 
-            while (num_available_washbasin(barber -> shop) <= 0) {
-               // TODO wait if there's no available washbasins
-            }
+            lock(barber->shop->mtx_washbasins);
+            down(barber->shop->sem_num_washbasins);
             send_log(barber->logId, (char*)"[process_request] before reserving washbasin");
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
             send_log(barber->logId, (char*)"[process_request] after reserving washbasin");
+            unlock(barber->shop->mtx_washbasins);
 
             barber->basinPosition = basinPosition;
             set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
@@ -466,11 +466,14 @@ static void process_requests_from_client(Barber* barber)
             barber -> tools = barber -> tools & !RAZOR_TOOL;
             log_barber(barber);
          }
+
+         //Releases the barber and the client from the chair
          if (is_barber_chair_service(&service)){
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
          }
          else{
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+            up(barber->shop->sem_num_washbasins);
          }
          log_barber(barber);
       }
@@ -562,6 +565,7 @@ static void process_hairwash_request(Barber* barber)
       complete += 100/steps;
       if (complete > 100)
          complete = 100;
+      debug_function_run_log(barber->logId,barber->id,int2str(complete));
       set_completion_washbasin(washbasin(barber->shop, barber->basinPosition), complete);
    }
    log_barber(barber);  // (if necessary) more than one in proper places!!!
