@@ -72,6 +72,7 @@ typedef struct _BarberShop_
    int sem_num_free_benches_pos;               // # free positions in client benches
    int sem_client_to_barber_ids;          // barbers to client ids
    int sem_service_announce;          // barbers to client ids
+   int sem_service_completion;          // barbers to client ids
    int sem_num_washbasins;
 
    /* other info */

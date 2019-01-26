@@ -94,6 +94,7 @@ void shop_sems_create(BarberShop* shop)
    shop -> sem_num_free_benches_pos	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_client_to_barber_ids   = psemget(IPC_PRIVATE, MAX_CLIENTS, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_service_announce		  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_service_completion	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_washbasins         = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);   
 
    /* initialize mutex semaphores */
@@ -125,6 +126,7 @@ void shop_sems_create(BarberShop* shop)
    ensure(shop -> sem_num_free_benches_pos > 0, "sem_num_benches_pos semaphore not created");
    ensure(shop -> sem_client_to_barber_ids > 0, "sem_client_to_barber_ids semaphore not created");
    ensure(shop -> sem_service_announce > 0, "sem_client_to_barber_ids semaphore not created");
+   ensure(shop -> sem_service_completion > 0, "sem_client_to_barber_ids semaphore not created");
    ensure(shop -> sem_num_washbasins > 0, "sem_num_washbasins semaphore not created");
 }
 
@@ -143,6 +145,7 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> sem_num_free_benches_pos, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_client_to_barber_ids, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_service_announce, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_service_completion, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_washbasins, 0, IPC_RMID, NULL);
 }
 

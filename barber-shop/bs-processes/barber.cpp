@@ -486,6 +486,7 @@ static void process_requests_from_client(Barber* barber)
          }
          log_barber(barber);
       }
+      up(barber -> shop -> sem_service_completion);
    }
 
 
@@ -573,7 +574,6 @@ static void process_hairwash_request(Barber* barber)
       complete += 100/steps;
       if (complete > 100)
          complete = 100;
-      debug_function_run_log(barber->logId,barber->id,int2str(complete));
       set_completion_washbasin(washbasin(barber->shop, barber->basinPosition), complete);
    }
    log_barber(barber);  // (if necessary) more than one in proper places!!!

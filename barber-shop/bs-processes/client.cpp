@@ -436,10 +436,11 @@ static void wait_all_services_done(Client* client)
          rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);
       }
       debug_function_run_log(client -> logId, client -> id, "Service done");
-      client -> state = DONE;
       log_client(client);
       client->requests -= service_request(&service);
+      down(client -> shop -> sem_service_completion);
    }
+   client -> state = DONE;
    debug_function_run_log(client -> logId, client -> id, "Before leaving shop");
    leave_barber_shop(client -> shop, client -> id);
    debug_function_run_log(client -> logId, client -> id, "after leaving shop");
