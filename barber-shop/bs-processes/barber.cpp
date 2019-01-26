@@ -501,7 +501,7 @@ static void process_requests_from_client(Barber* barber)
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 
-   ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
+   //ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
 // TODO VERIFY

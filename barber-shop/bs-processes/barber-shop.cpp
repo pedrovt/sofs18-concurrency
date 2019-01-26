@@ -96,6 +96,7 @@ void shop_sems_create(BarberShop* shop)
    shop -> sem_service_announce		  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_service_completion	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_washbasins         = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);   
+   shop -> sem_client_leave_shop      = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* initialize mutex semaphores */
    unlock(shop -> mtx_shop);
@@ -128,6 +129,7 @@ void shop_sems_create(BarberShop* shop)
    ensure(shop -> sem_service_announce > 0, "sem_client_to_barber_ids semaphore not created");
    ensure(shop -> sem_service_completion > 0, "sem_client_to_barber_ids semaphore not created");
    ensure(shop -> sem_num_washbasins > 0, "sem_num_washbasins semaphore not created");
+   ensure(shop -> sem_client_leave_shop > 0, "sem_num_washbasins semaphore not created");
 }
 
 /* semaphores destruction */
@@ -147,6 +149,7 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> sem_service_announce, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_service_completion, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_washbasins, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_client_leave_shop, 0, IPC_RMID, NULL);
 }
 
 // #############################################################################
@@ -494,6 +497,8 @@ void client_done(BarberShop* shop, int clientID)
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
+
+   up(shop -> sem_client_leave_shop);
    
    debug_function_run_log(shop->logId, 0, concat_3str("Client ",int2str(clientID), " is done"));
 

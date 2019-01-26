@@ -74,6 +74,7 @@ typedef struct _BarberShop_
    int sem_service_announce;          // barbers to client ids
    int sem_service_completion;          // barbers to client ids
    int sem_num_washbasins;
+   int sem_client_leave_shop;
 
    /* other info */
    int barber_to_client_ids[MAX_CLIENTS]; // client ID -> barber ID 

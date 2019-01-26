@@ -441,6 +441,7 @@ static void wait_all_services_done(Client* client)
       down(client -> shop -> sem_service_completion);
    }
    client -> state = DONE;
+   down(client -> shop -> sem_client_leave_shop);
    debug_function_run_log(client -> logId, client -> id, "Before leaving shop");
    leave_barber_shop(client -> shop, client -> id);
    debug_function_run_log(client -> logId, client -> id, "after leaving shop");
