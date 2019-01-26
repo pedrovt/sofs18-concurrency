@@ -93,8 +93,8 @@ void shop_sems_create(BarberShop* shop)
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_free_benches_pos	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_client_to_barber_ids   = psemget(IPC_PRIVATE, MAX_CLIENTS, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> sem_service_announce		  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> sem_service_completion	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_service_announce		  = psemget(IPC_PRIVATE, MAX_BARBERS, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_service_completion	  = psemget(IPC_PRIVATE, MAX_BARBERS, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_washbasins         = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);   
    shop -> sem_client_leave_shop      = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
@@ -460,7 +460,7 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
    /* update sync semaphore */
-   down(shop -> sem_service_announce);
+   down(shop -> sem_service_announce, barberID-1);
 
    //lock(shop->mtx_shop);
    Service res = get_service(shop, barberID-1);
@@ -480,7 +480,7 @@ void inform_client_on_service(BarberShop* shop, Service service)
    //unlock(shop->mtx_shop);
 
    /* update sync semaphore */
-   up(shop -> sem_service_announce);
+   up(shop -> sem_service_announce, ((&service)->barberID)-1);
 
    debug_function_run_log(shop->logId, 0, concat_6str("Service ", int2str(service.request), " going to be performed on client ", int2str(service.clientID), " by barber ", int2str(service.barberID)));
 

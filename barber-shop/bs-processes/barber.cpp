@@ -487,7 +487,7 @@ static void process_requests_from_client(Barber* barber)
             up(barber->shop->sem_num_washbasins);
          }
          log_barber(barber);
-         up(barber -> shop -> sem_service_completion);
+         up(barber -> shop -> sem_service_completion, (barber -> id)-1);
       }
    }
 

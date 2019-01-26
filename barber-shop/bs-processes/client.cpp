@@ -430,7 +430,7 @@ static void wait_all_services_done(Client* client)
       debug_function_run_log(client -> logId, client -> id, "Service done");
       log_client(client);
       client->requests -= service_request(&service);
-      down(client -> shop -> sem_service_completion);
+      down(client -> shop -> sem_service_completion, (client -> barberID)-1);
    }
    client -> state = DONE;
    down(client -> shop -> sem_client_leave_shop);
