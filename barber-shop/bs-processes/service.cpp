@@ -45,7 +45,6 @@ int is_barber_chair_service(Service* service)
 int is_washbasin_service(Service* service)
 {
    require (service != NULL, "service argument required");
-
    return service->washbasin;
 }
 
@@ -75,14 +74,4 @@ int service_request(Service* service)
    require (service != NULL, "service argument required");
 
    return service->request;
-}
-
-void used_service(Service* service, int used){
-	service->used = used;
-}
-
-int service_used(Service* service){
-   require (service != NULL, "service argument required");
-
-   return service->used;
 }

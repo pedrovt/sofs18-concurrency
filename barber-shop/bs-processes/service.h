@@ -26,7 +26,5 @@ int service_barber_id(Service* service);
 int service_client_id(Service* service);
 int service_position(Service* service);
 int service_request(Service* service);
-void used_service(Service *service, int used);
-int service_used(Service *service);
 
 #endif
