@@ -488,7 +488,6 @@ void inform_client_on_service(BarberShop* shop, Service service)
 
 }
 
-// TODO not done
 void client_done(BarberShop* shop, int clientID)
 {
    /** TODO:

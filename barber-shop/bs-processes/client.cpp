@@ -187,12 +187,8 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
-   
-   if (client->state == NONE)
-      log_client(client);
 }
 
-// TODO [FINISH SIMULATION] verify if it's needed
 static void notify_client_death(Client* client)
 {
    /** TODO:
@@ -201,19 +197,7 @@ static void notify_client_death(Client* client)
 
    require (client != NULL, "client argument required");
 
-   if (client -> state == NONE)
-      log_client(client);
-
-   /* decrease the number of active clients */
-   /*send_log(client->logId, (char *)"[notify_client_death] going to lock");
-   lock(get_mtxid_id(client->shop));
-
-   int old_value = client -> shop -> numActiveClients;
-   client -> shop -> numActiveClients = old_value - 1 ;
-
-   send_log(client->logId, (char *)"[notify_client_death] going to unlock");
-   unlock(get_mtxid_id(client->shop));
-   */
+   debug_function_run_log(client->logId, client->id, "Going to die");
 }
 
 // #############################################################################
