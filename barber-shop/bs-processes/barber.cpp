@@ -513,10 +513,7 @@ static void release_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
-
-   // SYNC, MUTEX?
-   // notify a client that all its services are done
-   // function from barber-shop module
+   barber -> clientID = 0;
    client_done(barber->shop, barber->clientID);
    barber -> clientID = 0;
 
