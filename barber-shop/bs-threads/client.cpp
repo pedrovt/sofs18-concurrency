@@ -307,7 +307,7 @@ static void wait_all_services_done(Client* client)
    while(client->requests != 0){
       client->state = WAITING_SERVICE;
       log_client(client);
-      Service service = wait_service_from_barber(client->shop, client->barberID);
+      Service service = wait_service_from_barber(client->shop, client->id);
 
       client->state = WAITING_SERVICE_START;
       log_client(client);

@@ -11,25 +11,6 @@
 #include <iostream>
 #include <unordered_map>
 
-pthread_mutex_t enterCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t enterCD = PTHREAD_COND_INITIALIZER;
-pthread_cond_t riseCD = PTHREAD_COND_INITIALIZER;
-
-pthread_mutex_t greetCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t greetCD = PTHREAD_COND_INITIALIZER;
-
-pthread_mutex_t processCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t serviceCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t serviceCD = PTHREAD_COND_INITIALIZER;
-pthread_cond_t riseChairCD = PTHREAD_COND_INITIALIZER;
-pthread_cond_t riseWashCD = PTHREAD_COND_INITIALIZER;
-pthread_cond_t sitCD = PTHREAD_COND_INITIALIZER;
-
-pthread_mutex_t toolCR = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t scissorCD = PTHREAD_COND_INITIALIZER;
-pthread_cond_t combCD = PTHREAD_COND_INITIALIZER;
-pthread_cond_t razorCD = PTHREAD_COND_INITIALIZER;
-
 std::unordered_map<int, Service> services;
 std::unordered_map<int, int> greetings;
 
@@ -85,8 +66,12 @@ void init_barber_shop(BarberShop* shop, int num_barbers, int num_chairs,
    shop->numClientBenchesSeats = num_client_benches_seats;
    shop->numClientBenches = num_client_benches;
    shop->numClientsInside = 0;
-   for(int i = 0; i < MAX_CLIENTS; i++)
+   for(int i = 0; i < MAX_CLIENTS; i++) {
       shop->clientsInside[i] = 0;
+      shop->commChannel[i].mutex = PTHREAD_MUTEX_INITIALIZER;
+      shop->commChannel[i].cond = PTHREAD_COND_INITIALIZER;
+      shop->commChannel[i].state = 0;
+   }
    shop->opened = 1;
    shop->clientsOn = 0;
 
@@ -286,25 +271,30 @@ int is_client_inside(BarberShop* shop, int clientID)
    return res;
 }
 
-Service wait_service_from_barber(BarberShop* shop, int barberID)
+// Mudado para cliente ID, para ser necessario so um array para as comunicacoes
+// Usando o clientID-1 como indice
+Service wait_service_from_barber(BarberShop* shop, int clientID)
 {
    /** TODO:
     * function called from a client, expecting to be informed of the next Service to be provided by a barber
     **/
 
-   pthread_mutex_lock(&shop->serviceCR);
+   pthread_mutex_lock(&shop->commChannel[clientID - 1].mutex);
 
    require (shop != NULL, "shop argument required");
-   require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
+   require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   while(services.find(barberID) == services.end())
-      pthread_cond_wait(&shop->serviceCD, &shop->serviceCR);
-   Service res = services.at(barberID);
-   services.erase(barberID);
 
-   pthread_mutex_unlock(&shop->serviceCR);
+   while(!shop->commChannel[clientID - 1].state) 
+      pthread_cond_wait(&shop->commChannel[clientID - 1].cond, &shop->commChannel[clientID - 1].mutex);
+
+   Service service = shop->commChannel[clientID - 1].service;
+   shop->commChannel[clientID - 1].state = 0;
+
+   pthread_mutex_unlock(&shop->commChannel[clientID - 1].mutex);
+
+   return service;
    
-   return res;
 }
 
 void inform_client_on_service(BarberShop* shop, Service service)
@@ -313,14 +303,16 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   pthread_mutex_lock(&shop->serviceCR);
+   pthread_mutex_lock(&shop->commChannel[service_client_id(&service) - 1].mutex);
 
    require (shop != NULL, "shop argument required");
+   require (service_client_id(&service) > 0, concat_3str("invalid client id (", int2str(service_client_id(&service)), ")"));
 
-   services.insert(std::pair<int, Service>(service_barber_id(&service), service));
-   pthread_cond_broadcast(&shop->serviceCD);
+   shop->commChannel[service_client_id(&service) - 1].service = service;
+   shop->commChannel[service_client_id(&service) - 1].state = 1;
+   pthread_cond_broadcast(&shop->commChannel[service_client_id(&service) - 1].cond);
 
-   pthread_mutex_unlock(&shop->serviceCR);
+   pthread_mutex_unlock(&shop->commChannel[service_client_id(&service) - 1].mutex);
 
 }
 
@@ -396,15 +388,16 @@ void receive_and_greet_client(BarberShop* shop, int barberID, int clientID)
     * it must send the barber ID to the client
     **/
 
-   pthread_mutex_lock(&shop->greetCR);
+   pthread_mutex_lock(&shop->commChannel[clientID - 1].mutex);
 
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
-   greetings.insert(std::pair<int, int>(clientID, barberID));
-   pthread_cond_broadcast(&shop->greetCD);
+   shop->commChannel[clientID - 1].barberID = barberID;
+   shop->commChannel[clientID - 1].state = 1;
+   pthread_cond_broadcast(&shop->commChannel[clientID - 1].cond);
 
-   pthread_mutex_unlock(&shop->greetCR);
+   pthread_mutex_unlock(&shop->commChannel[clientID - 1].mutex);
 
 }
 int greet_barber(BarberShop* shop, int clientID)
@@ -413,17 +406,18 @@ int greet_barber(BarberShop* shop, int clientID)
     * function called from a client, expecting to receive its barber's ID
     **/
 
-   pthread_mutex_lock(&shop->greetCR);
+   pthread_mutex_lock(&shop->commChannel[clientID - 1].mutex);
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   while(greetings.find(clientID) == greetings.end()) 
-      pthread_cond_wait(&shop->greetCD, &shop->greetCR);
+   while(!shop->commChannel[clientID - 1].state) 
+      pthread_cond_wait(&shop->commChannel[clientID - 1].cond, &shop->commChannel[clientID - 1].mutex);
 
-   int barberID = greetings.at(clientID);
-   greetings.erase(clientID);
-   pthread_mutex_unlock(&shop->greetCR);
+   int barberID = shop->commChannel[clientID - 1].barberID;
+   shop->commChannel[clientID - 1].state = 0;
+
+   pthread_mutex_unlock(&shop->commChannel[clientID - 1].mutex);
 
    return barberID;
 

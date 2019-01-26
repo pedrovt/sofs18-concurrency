@@ -15,24 +15,14 @@
 #include "service.h"
 #include "client-benches.h"
 
-extern pthread_mutex_t enterCR;
-extern pthread_cond_t enterCD;
-extern pthread_cond_t riseCD;
-
-extern pthread_mutex_t greetCR;
-extern pthread_cond_t greetCD;
-
-extern pthread_mutex_t processCR;
-extern pthread_mutex_t serviceCR;
-extern pthread_cond_t serviceCD;
-extern pthread_cond_t riseChairCD;
-extern pthread_cond_t riseWashCD;
-extern pthread_cond_t sitCD;
-
-extern pthread_mutex_t toolCR;
-extern pthread_cond_t scissorCD;
-extern pthread_cond_t combCD;
-extern pthread_cond_t razorCD;
+typedef struct _Communication_
+{
+   pthread_mutex_t mutex;
+   pthread_cond_t cond;
+   int barberID;
+   Service service;
+   int state;
+} Communication;
 
 typedef struct _BarberShop_
 {
@@ -63,6 +53,7 @@ typedef struct _BarberShop_
    int logId;
    char* internal;
 
+   Communication commChannel[MAX_CLIENTS];
    int clientsOn;
 
    pthread_mutex_t barber_benchCR = PTHREAD_MUTEX_INITIALIZER; // Para as cadeiras dos barbeiros
@@ -93,8 +84,6 @@ typedef struct _BarberShop_
 
    pthread_mutex_t razorCR = PTHREAD_MUTEX_INITIALIZER; // Para os razors
    pthread_cond_t razor_returnCD = PTHREAD_COND_INITIALIZER;
-
-   pthread_mutex_t clientsCR = PTHREAD_MUTEX_INITIALIZER; // Para os serviços
 
 } BarberShop;
 
