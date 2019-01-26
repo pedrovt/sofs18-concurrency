@@ -426,7 +426,9 @@ static void wait_all_services_done(Client* client)
          // wait to finish
          while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
             ;
+         send_log(client->logId, (char*)"[wait_all_services_done] Service finished");
          rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
+         send_log(client->logId, (char*)"[wait_all_services_done] after getting out of washbasin");
       }
       else if(is_barber_chair_service(&service)) {                                    // chair (haircut, chair)
          sit_in_barber_chair(&(client -> shop -> barberChair[service_position(&service)]), client->id);
@@ -437,10 +439,13 @@ static void wait_all_services_done(Client* client)
             ;
          rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);
       }
+      send_log(client->logId, (char*)"[wait_all_services_done] Service done");
       client -> state = DONE;
       log_client(client);
-      client -> requests -= service_request(&service);
+      client->requests -= service_request(&service);
    }
+   send_log(client->logId, (char*)"[wait_all_services_done] Before leaving shop");
    leave_barber_shop(client -> shop, client -> id);
+   send_log(client->logId, (char*)"[wait_all_services_done] after leaving shop");
    log_client(client); // more than one in proper places!!!
 }
