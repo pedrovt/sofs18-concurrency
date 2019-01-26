@@ -353,7 +353,6 @@ static void wait_its_turn(Client* client)
    log_client(client);
 }
 
-// TODO finish friday
 static void rise_from_client_benches(Client* client)
 {
    /** TODO:
@@ -364,29 +363,23 @@ static void rise_from_client_benches(Client* client)
 
    debug_function_run_log(client -> logId, client -> id, "Going to rise from client bench");
 
-   /* update # free positions in benches and number clients in benches semaphores */
-   
-
-   send_log(client->logId, (char*)"[rise_from_client_benches] after semaphores updates");
-
-
    /* remove client from client benches 
     * Critical Zone: 2+ clients rising at the same time
     */
-   lock(client -> shop -> mtx_clients_benches);
+   lock(client -> shop -> mtx_clients_benches);                                  // !LOCK
 
    rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
    client->benchesPosition = -1;    // In valid position, ie not in the bench
 
-   unlock(client -> shop -> mtx_clients_benches);
+   /* update # free positions in benches and number clients in benches semaphores */
+   //up(client -> shop -> sem_num_free_benches_pos);
+   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFYkkkkkkk
+   send_log(client->logId, (char*)"[rise_from_client_benches] after semaphores updates");
+   
+   unlock(client -> shop -> mtx_clients_benches);                                // !UNLOCK
 
    debug_function_run_log(client -> logId, client -> id, "Has risen from client bench");
    log_client(client);
-
-   up(client -> shop -> sem_num_free_benches_pos);
-   debug_function_run_log(client -> logId, client -> id, "after up(client -> shop -> sem_num_free_benches_pos)");
-   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFYkkkkkkk
-   debug_function_run_log(client -> logId, client -> id, "after down(client -> shop -> sem_num_clients_in_benches)");
 
    ensure (!seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," can't be seated in benches"));
 

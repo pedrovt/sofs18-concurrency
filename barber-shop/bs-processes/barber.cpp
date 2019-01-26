@@ -230,6 +230,7 @@ static void wait_for_client(Barber* barber)
       debug_function_run_log(barber -> logId, barber -> id, concat_2str("# clients in benches is: ", int2str(sem_val)));
       */
       down(barber -> shop -> sem_num_clients_in_benches);                        // ! DOWN
+      up(barber -> shop -> sem_num_free_benches_pos);
 
       /*
       sem_val = psemctl(barber -> shop -> sem_num_clients_in_benches, 0, GETVAL);      // for debug purposes
