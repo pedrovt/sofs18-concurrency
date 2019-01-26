@@ -70,9 +70,13 @@ typedef struct _BarberShop_
    int sem_num_clients_in_benches;        // # clients	     in clients benches
    int sem_num_free_benches_pos;               // # free positions in client benches
    int sem_client_to_barber_ids;          // barbers to client ids
+   int sem_service_announce;          // barbers to client ids
 
    /* other info */
    int barber_to_client_ids[MAX_CLIENTS]; // client ID -> barber ID 
+
+   /* Service array*/
+   Service services[MAX_BARBERS];
 
 } BarberShop;
 
@@ -130,6 +134,7 @@ void unlock(int id, int index);
 void down(int id, int index);
 void up(int id, int index);
 
-
+Service get_service(BarberShop* shop, int i, Service* service);
+void set_service(BarberShop* shop, int i);
 
 #endif

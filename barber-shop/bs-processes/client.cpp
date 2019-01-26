@@ -265,7 +265,7 @@ static void select_requests(Client* client)
    client -> state = SELECTING_REQUESTS;
 
    // Requests are a value from 1 to 7 (3 bits <=> 3 services)
-   if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
+   /*if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
    {
       client -> requests = (client -> requests) | HAIRCUT_REQ;
    }
@@ -276,7 +276,7 @@ static void select_requests(Client* client)
    if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
    {
       client -> requests = (client -> requests) | SHAVE_REQ;
-   }
+   }*/
 
    if (client -> requests == 0) {
       client -> requests = WASH_HAIR_REQ;
@@ -362,9 +362,14 @@ static void rise_from_client_benches(Client* client)
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
 
+   send_log(client->logId, (char*)"[rise_from_client_benches] before semaphores updates");
+
    /* update # free positions in benches and number clients in benches semaphores */
    up(client -> shop -> sem_num_free_benches_pos);
-   down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFY
+   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFY
+
+   send_log(client->logId, (char*)"[rise_from_client_benches] after semaphores updates");
+
 
    /* remove client from client benches 
     * Critical Zone: 2+ clients rising at the same time
@@ -376,7 +381,7 @@ static void rise_from_client_benches(Client* client)
 
    unlock(client -> shop -> mtx_clients_benches);
 
-   log_client(client);
+   send_log(client->logId, (char*)"[rise_from_client_benches] has risen from client bench");
 
    ensure (!seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," can't be seated in benches"));
 
@@ -405,14 +410,17 @@ static void wait_all_services_done(Client* client)
    while(client->requests != 0){
       client -> state = WAITING_SERVICE;
       log_client(client);
+      send_log(client->logId, (char*)"[wait_all_services_done] before getting service");
       Service service = wait_service_from_barber(client -> shop, client -> barberID);
-
+      send_log(client->logId, (char*)"[wait_all_services_done] after getting service");
       client -> state = WAITING_SERVICE_START;
       log_client(client);
 
       // define destination
       if (is_washbasin_service(&service)) {     // washbasin (hair wash)
+      	 send_log(client->logId, (char*)"[wait_all_services_done] before sitting in washbasin");
          sit_in_washbasin(&(client -> shop -> washbasin[service_position(&service)]), client -> id);
+         send_log(client->logId, (char*)"[wait_all_services_done] after sitting in washbasin");
          client -> state = HAVING_A_HAIR_WASH;
          log_client(client);
          // wait to finish
@@ -420,7 +428,7 @@ static void wait_all_services_done(Client* client)
             ;
          rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
       }
-      else {                                    // chair (haircut, chair)
+      else if(is_barber_chair_service(&service)) {                                    // chair (haircut, chair)
          sit_in_barber_chair(&(client -> shop -> barberChair[service_position(&service)]), client->id);
          client->state = service.request == HAIRCUT_REQ ? HAVING_A_HAIRCUT : HAVING_A_SHAVE;
          log_client(client);
