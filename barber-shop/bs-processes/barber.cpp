@@ -277,7 +277,8 @@ static void wait_for_client(Barber* barber)
       debug_function_run_log(barber -> logId, barber -> id, concat_3str("End of Critical zone! After next_client_in_benches, client id is: ", int2str(client.clientID), "\n"));
 
       /* 3. receive and greet client */ 
-      receive_and_greet_client(barber->shop, barber->id, client.clientID);
+      if (client.clientID > 0)
+        receive_and_greet_client(barber->shop, barber->id, client.clientID);
    }
 }
 
@@ -296,7 +297,7 @@ static int work_available(Barber* barber)
       debug_function_run_log(barber -> logId, barber -> id, "Shop closed");
       
       /* down do sem�foro com # clientes nas benches */
-      down(barber -> shop -> sem_num_clients_in_benches);
+      //down(barber -> shop -> sem_num_clients_in_benches);
       
       /* critical zone */
       debug_function_run_log(barber -> logId, barber -> id, "Critical zone! Going to lock");
@@ -514,6 +515,7 @@ static void release_client(Barber* barber)
    require (barber != NULL, "barber argument required");
    barber -> clientID = 0;
    client_done(barber->shop, barber->clientID);
+   barber -> clientID = 0;
 
    log_barber(barber);
 }
