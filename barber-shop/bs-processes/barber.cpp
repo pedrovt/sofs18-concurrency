@@ -506,7 +506,6 @@ static void release_client(Barber* barber)
     **/
 
    require (barber != NULL, "barber argument required");
-   barber -> clientID = 0;
    client_done(barber->shop, barber->clientID);
    barber -> clientID = 0;
 
