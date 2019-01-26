@@ -334,7 +334,7 @@ static void wait_its_turn(Client* client)
    debug_function_run_log(client -> logId, client -> id, concat_2str("After enter barbershop, benches position is: ", int2str(benchesPosition)));
 
    unlock(client -> shop -> mtx_clients_benches);                                // ! UNLOCK
-   send_log(client->logId, (char *)"[wait_its_turn] End of critical zone! after unlock");
+   debug_function_run_log(client -> logId, client -> id, "End of critical zone! after unlock");
 
    /* TODO up semaphore with number of clients in benches */
    up(client -> shop -> sem_num_clients_in_benches);                         // ! UP
@@ -373,8 +373,8 @@ static void rise_from_client_benches(Client* client)
 
    /* update # free positions in benches and number clients in benches semaphores */
    //up(client -> shop -> sem_num_free_benches_pos);
-   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFYkkkkkkk
-   send_log(client->logId, (char*)"[rise_from_client_benches] after semaphores updates");
+   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFY
+   debug_function_run_log(client -> logId, client -> id, "After semaphores updates");
    
    unlock(client -> shop -> mtx_clients_benches);                                // !UNLOCK
 
@@ -385,8 +385,6 @@ static void rise_from_client_benches(Client* client)
 
 }
 
-// #############################################################################
-// TODO after friday
 static void wait_all_services_done(Client* client)
 {
    /** TODO:
@@ -408,25 +406,25 @@ static void wait_all_services_done(Client* client)
    while(client->requests != 0){
       client -> state = WAITING_SERVICE;
       log_client(client);
-      send_log(client->logId, (char*)"[wait_all_services_done] before getting service");
+      debug_function_run_log(client -> logId, client -> id, "before getting service");
       Service service = wait_service_from_barber(client -> shop, client -> barberID);
-      send_log(client->logId, (char*)"[wait_all_services_done] after getting service");
+      debug_function_run_log(client -> logId, client -> id, "after getting service");
       client -> state = WAITING_SERVICE_START;
       log_client(client);
 
       // define destination
       if (is_washbasin_service(&service)) {     // washbasin (hair wash)
-      	 send_log(client->logId, (char*)"[wait_all_services_done] before sitting in washbasin");
+      	 debug_function_run_log(client -> logId, client -> id, "before sitting in washbasin");
          sit_in_washbasin(&(client -> shop -> washbasin[service_position(&service)]), client -> id);
-         send_log(client->logId, (char*)"[wait_all_services_done] after sitting in washbasin");
+         debug_function_run_log(client -> logId, client -> id, "after sitting in washbasin");
          client -> state = HAVING_A_HAIR_WASH;
          log_client(client);
          // wait to finish
          while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
             ;
-         send_log(client->logId, (char*)"[wait_all_services_done] Service finished");
+         debug_function_run_log(client -> logId, client -> id, "Service finished");
          rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
-         send_log(client->logId, (char*)"[wait_all_services_done] after getting out of washbasin");
+         debug_function_run_log(client -> logId, client -> id, "after getting out of washbasin");
       }
       else if(is_barber_chair_service(&service)) {                                    // chair (haircut, chair)
          sit_in_barber_chair(&(client -> shop -> barberChair[service_position(&service)]), client->id);
@@ -437,13 +435,13 @@ static void wait_all_services_done(Client* client)
             ;
          rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);
       }
-      send_log(client->logId, (char*)"[wait_all_services_done] Service done");
+      debug_function_run_log(client -> logId, client -> id, "Service done");
       client -> state = DONE;
       log_client(client);
       client->requests -= service_request(&service);
    }
-   send_log(client->logId, (char*)"[wait_all_services_done] Before leaving shop");
+   debug_function_run_log(client -> logId, client -> id, "Before leaving shop");
    leave_barber_shop(client -> shop, client -> id);
-   send_log(client->logId, (char*)"[wait_all_services_done] after leaving shop");
+   debug_function_run_log(client -> logId, client -> id, "after leaving shop");
    log_client(client); // more than one in proper places!!!
 }
