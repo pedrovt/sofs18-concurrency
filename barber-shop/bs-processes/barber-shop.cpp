@@ -107,15 +107,14 @@ void shop_sems_create(BarberShop* shop)
    
    /* initialize sync semaphores */
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
-      unlock(shop -> sem_num_free_benches_pos);
+      up(shop -> sem_num_free_benches_pos);
    }
 
    for(int i = 0; i < global -> NUM_WASHBASINS; i++){
-        unlock(shop -> sem_num_washbasins);
+      up(shop -> sem_num_washbasins);
    }
 
    /* post-conditions for mutex semaphores */
-   // todo verify the correct pos condition
    ensure(shop -> mtx_shop > 0, "mtx_shop semaphore not created");
    ensure(shop -> mtx_barber_benches  > 0, "mtx_barber_benches semaphore not created");
    ensure(shop -> mtx_clients_benches > 0, "mtx_clients_benches semaphore not created");
@@ -369,6 +368,7 @@ void close_shop(BarberShop *shop)
    require(shop != NULL, "shop argument required");
    require(shop_opened(shop), "barber shop already closed");
 
+   debug_function_run_log(shop -> logId, 0, "Closing shop");
    shop->opened = 0;
 }
 

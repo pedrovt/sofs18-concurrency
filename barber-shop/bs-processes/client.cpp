@@ -265,21 +265,29 @@ static void select_requests(Client* client)
    client -> state = SELECTING_REQUESTS;
 
    // Requests are a value from 1 to 7 (3 bits <=> 3 services)
-   if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
-   {
-      client -> requests = (client -> requests) | HAIRCUT_REQ;
-   }
-   if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
-   {
-      client -> requests = (client -> requests) | WASH_HAIR_REQ;
-   }
-   if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
-   {
-      client -> requests = (client -> requests) | SHAVE_REQ;
+   int milestone1 = 1;
+   
+   if (milestone1) {
+      client -> requests = WASH_HAIR_REQ;
    }
 
-   if (client -> requests == 0) {
-      client -> requests = WASH_HAIR_REQ;
+   else {
+      if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
+      {
+         client -> requests = (client -> requests) | HAIRCUT_REQ;
+      }
+      if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
+      {
+         client -> requests = (client -> requests) | WASH_HAIR_REQ;
+      }
+      if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
+      {
+         client -> requests = (client -> requests) | SHAVE_REQ;
+      }
+
+      if (client -> requests == 0) {
+         client -> requests = WASH_HAIR_REQ;
+      }
    }
    
    ensure(((client->requests) >= 1 && (client->requests) <= 7), concat_2str("invalid client request ", int2str(client->requests)));
@@ -337,7 +345,7 @@ static void wait_its_turn(Client* client)
    debug_function_run_log(client -> logId, client -> id, "End of critical zone! after unlock");
 
    /* TODO up semaphore with number of clients in benches */
-   up(client -> shop -> sem_num_clients_in_benches);                         // ! UP
+   up(client -> shop -> sem_num_clients_in_benches);                             // ! UP
 
    client -> benchesPosition = benchesPosition;
    
@@ -446,4 +454,6 @@ static void wait_all_services_done(Client* client)
    leave_barber_shop(client -> shop, client -> id);
    debug_function_run_log(client -> logId, client -> id, "after leaving shop");
    log_client(client); // more than one in proper places!!!
+
+   ensure (!is_client_inside(client -> shop, client -> id), "client must leave the barber shop");
 }
