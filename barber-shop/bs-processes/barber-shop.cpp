@@ -385,7 +385,6 @@ int reserve_random_empty_barber_chair(BarberShop* shop, int barberID)
    return res;
 }
 
-// TODO might have to be changed
 int num_available_washbasin(BarberShop* shop)
 {
    require (shop != NULL, "shop argument required");
@@ -398,7 +397,6 @@ int num_available_washbasin(BarberShop* shop)
    return res;
 }
 
-// TODO might have to be changed
 int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -422,7 +420,6 @@ int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
    return res;
 }
 
-// TODO might have to be changed
 int is_client_inside(BarberShop* shop, int clientID)
 {
    require (shop != NULL, "shop argument required");
@@ -436,7 +433,6 @@ int is_client_inside(BarberShop* shop, int clientID)
    return res;
 }
 
-// TODO not done
 Service wait_service_from_barber(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -446,6 +442,7 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
+   /* update sync semaphore */
    down(shop -> sem_service_announce);
 
    //lock(shop->mtx_shop);
@@ -455,7 +452,6 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    return res;
 }
 
-// TODO not done
 void inform_client_on_service(BarberShop* shop, Service service)
 {
    /** TODO:
@@ -466,9 +462,10 @@ void inform_client_on_service(BarberShop* shop, Service service)
    set_service(shop, service_barber_id(&service) - 1, &service);
    //unlock(shop->mtx_shop);
 
+   /* update sync semaphore */
    up(shop -> sem_service_announce);
 
-   send_log(shop->logId,concat_6str("Service ", int2str(service.request), " going to be performed on client ", int2str(service.clientID), " by barber ", int2str(service.barberID)));
+   debug_function_run_log(shop->logId, 0, concat_6str("Service ", int2str(service.request), " going to be performed on client ", int2str(service.clientID), " by barber ", int2str(service.barberID)));
 
    require (shop != NULL, "shop argument required");
 
@@ -483,18 +480,16 @@ void client_done(BarberShop* shop, int clientID)
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
-   send_log(shop->logId,concat_3str("Client ",int2str(clientID), " is done"));
+   
+   debug_function_run_log(shop->logId, 0, concat_3str("Client ",int2str(clientID), " is done"));
 
 }
 
-// TODO might have to be changed
 int enter_barber_shop(BarberShop* shop, int clientID, int request)
 {
    /** TODO:
     * Function called from a client when entering the barbershop
     **/
-
-   //printf("\n\n\n\n\n\n\n---------------------\n\n\n\nHELLO ENTER BARBER SHOP");
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
@@ -502,22 +497,12 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require(num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
-   //send_log(shop->logId, concat_2str("\nBEFORE RANDOM SIT\nQUEUE SIZE IN ENTER BARBER SHOP? ", int2str(shop->clientBenches.queue.size)));
-   //printf("\nRANDOM SIT");
-
-   //log_client_benches(&shop->clientBenches);
-
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
-   
-   //send_log(shop->logId, concat_2str("\nAFTER RANDOM SIT\nQUEUE SIZE IN ENTER BARBER SHOP? ", int2str(shop->clientBenches.queue.size)));
-
    shop -> clientsInside[shop->numClientsInside++] = clientID;
    
-
    return res;
 }
 
-// TODO might have to be changed
 void leave_barber_shop(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -537,7 +522,6 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
-// TODO
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
@@ -548,20 +532,22 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
+   /* critical zone: 2+ barbers trying to receive a client */
+   debug_function_run_log(shop->logId, 0, "Critical zone! Before lock");
+   lock(shop -> mtx_clients_to_barbers_ids);                                    // !LOCK
    
-   // !Critical area. A client can be trying to greet a barber
-   lock(shop -> mtx_clients_to_barbers_ids);                                  // !LOCK
    shop -> barber_to_client_ids[clientID] = barberID;
-   unlock(shop -> mtx_clients_to_barbers_ids);                                // !UNLOCK
    
-   send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
+   unlock(shop -> mtx_clients_to_barbers_ids);                                  // !UNLOCK
    
+   debug_function_run_log(shop->logId, 0, "End of critical zone! After lock");
+   
+   /* update sync semaphore */
    up(shop -> sem_client_to_barber_ids, clientID);
 
+   /* at this point, a client can greet the barber */
 }
 
-// TODO 
 int greet_barber(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -571,17 +557,24 @@ int greet_barber(BarberShop* shop, int clientID)
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
+   debug_function_run_log(shop->logId, 0, concat_2str("Client id is ", int2str(clientID)));
+   
+   /* update sync semaphore */
    down(shop -> sem_client_to_barber_ids, clientID);
+   
+   /* at this point, a client can greet the barber */
+
    int res = 0;
-   send_log(shop->logId, (char*)"[greet_barber] before lock");
-   lock(shop -> mtx_clients_to_barbers_ids);                                  // !LOCK                    
+   
+   /* critical zone : 2+ clients trying to access the client_to_barbers info */
+   debug_function_run_log(shop->logId, 0, "Critical zone! Before lock");
+   lock(shop -> mtx_clients_to_barbers_ids);                                    // !LOCK                    
+   
    res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
 
-   unlock(shop -> mtx_clients_to_barbers_ids);                                // !UNLOCK 
-   send_log(shop->logId, (char*)"[greet_barber] after lock");
+   unlock(shop -> mtx_clients_to_barbers_ids);                                  // !UNLOCK 
+   debug_function_run_log(shop->logId, 0, concat_2str("End of critical zone! After lock. Barber id for the client is ", int2str(res)));
 
-   send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
    ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
-
    return res;
 }
