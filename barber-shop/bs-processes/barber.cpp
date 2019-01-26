@@ -392,12 +392,12 @@ static void process_requests_from_client(Barber* barber)
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber); //confirm if it's the best place
 
-            while (num_available_barber_chairs(barber->shop) <= 0){
-               // TODO wait if there's no available barber chairs
-            }
+            lock(barber->shop->mtx_barber_chairs);
+            down(barber->shop->sem_num_barber_chairs);
             debug_function_run_log(barber->logId, barber -> id, "before reserving barber chair");
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
             debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
+			unlock(barber->shop->mtx_barber_chairs);
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -481,6 +481,7 @@ static void process_requests_from_client(Barber* barber)
          //Releases the barber and the client from the chair
          if (is_barber_chair_service(&service)){
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+            up(barber->shop->sem_num_barber_chairs);
          }
          else{
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
