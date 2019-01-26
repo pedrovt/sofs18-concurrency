@@ -315,10 +315,11 @@ static void rise_from_barber_bench(Barber* barber){
    rise_barber_bench(barber_bench(barber->shop), barber->benchPosition);
    barber->benchPosition = -1; // Invalid position, ie not in the bench
    
-   debug_function_run_log(barber -> logId, barber -> id, "Has risen from barber bench");
    log_barber_bench(barber_bench(barber->shop));
 
    unlock(barber -> shop -> mtx_barber_benches);                                 // !UNLOCK
+   
+   debug_function_run_log(barber -> logId, barber -> id, "Has risen from barber bench");
    log_barber(barber);
 }
 
