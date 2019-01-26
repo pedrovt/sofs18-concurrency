@@ -510,6 +510,7 @@ static void release_client(Barber* barber)
    // notify a client that all its services are done
    // function from barber-shop module
    client_done(barber->shop, barber->clientID);
+   barber -> clientID = 0;
 
    log_barber(barber);
 }
