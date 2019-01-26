@@ -422,7 +422,7 @@ static void wait_all_services_done(Client* client)
          // wait to finish
          while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
             ;
-         debug_function_run_log(client -> logId, client -> id, "Service finished");
+         debug_function_run_log(client -> logId, client -> id, "before getting out of washbasin");
          rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
          debug_function_run_log(client -> logId, client -> id, "after getting out of washbasin");
       }
