@@ -256,6 +256,15 @@ static void wait_for_client(Barber* barber)
       log_client_benches(client_benches(barber->shop));
       
       RQItem client = next_client_in_benches(client_benches(barber->shop));
+      
+      //! TEMP FIX   if (barber-> shop -> opened) should work
+      /*if (client.clientID == 0) {
+         unlock(barber -> shop -> mtx_clients_benches);  
+         debug_function_run_log(barber -> logId, barber -> id, "Returning");
+         barber->clientID = -1;
+         return;
+      }
+      */
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
       
@@ -296,7 +305,6 @@ static int work_available(Barber* barber)
       // retirar elemento da fila 
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       res = client.clientID;
-      debug_function_run_log(barber -> logId, barber -> id, concat_2str("Result is ", int2str(res)));
 
       unlock(barber -> shop -> mtx_clients_benches);                             //! UNLOCK
       debug_function_run_log(barber -> logId, barber -> id, "End of critical zone!");
@@ -304,6 +312,7 @@ static int work_available(Barber* barber)
       ensure (res == 0, "Client benches MUST be empty at this point in the simulation");
    } 
 
+   debug_function_run_log(barber -> logId, barber -> id, concat_2str("Result is ", int2str(res)));
    return res;
 }
 
@@ -355,13 +364,14 @@ static void process_requests_from_client(Barber* barber)
 
    require (barber != NULL, "barber argument required");
 
-   //! Critical zone, several barbers reserving
-
-   //? ANY SIMPLER WAY TO OBTAIN THIS INFO?
-   int requests[3] = {HAIRCUT_REQ, SHAVE_REQ, WASH_HAIR_REQ};
-   //int requests = WASH_HAIR_REQ;
+   /* Critical zones: 
+    * 2+ barbers reserving material (chairs/tools/washbasins) 
+    */
+   int numRequests = 3;	                        // Milestone 1 = 1
+   int requests[3] = {WASH_HAIR_REQ, HAIRCUT_REQ, SHAVE_REQ};  
+  
    // for each request
-   for (int i = 0; i < 3; i++) {
+   for (int i = 0; i < numRequests; i++) {
       int request = requests[i];
 
       // if it's actually a request from the client
@@ -369,7 +379,7 @@ static void process_requests_from_client(Barber* barber)
          Service service;
 
          // Wash Request -> Reserve the basin
-         if (request == WASH_HAIR_REQ){
+         if (request == WASH_HAIR_REQ) {
             // set the client state??? shouldn't be barber?
             barber -> state = WAITING_WASHBASIN;
             log_barber(barber); //confirm if it's the best place 
@@ -488,9 +498,6 @@ static void process_requests_from_client(Barber* barber)
          up(barber -> shop -> sem_service_completion);
       }
    }
-
-
-   release_client(barber);
 
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 

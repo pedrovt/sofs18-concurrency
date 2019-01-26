@@ -147,10 +147,12 @@ static void finish()
    for (int i = 0; i < global -> NUM_CLIENTS; i++)
    {
       pwaitpid(allClientsIds[i], &allClientsStatus[i], 0);
-      // printf("Process %d returned\n", allClientsIds[i]);
+      printf("Process %d returned\n", allClientsIds[i]);
    }
 
+   printf("All clients done!");
    /* by now all clients have finished */
+   close_shop(shop);
    
    // ? verify [finalization]
    /* TODO UP NUM_BARBERS of semaphore num clients in benches */
