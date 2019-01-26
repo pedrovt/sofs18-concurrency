@@ -66,6 +66,7 @@ typedef struct _BarberShop_
    int mtx_clients_benches;               // client benches
    int mtx_clients_to_barbers_ids;        // clients to barbers ids
    int mtx_washbasins;
+   int mtx_barber_chairs;
    
    /* sync semaphores */
    int sem_num_clients_in_benches;        // # clients	     in clients benches
@@ -74,6 +75,7 @@ typedef struct _BarberShop_
    int sem_service_announce;          // barbers to client ids
    int sem_service_completion;          // barbers to client ids
    int sem_num_washbasins;
+   int sem_num_barber_chairs;
    int sem_client_leave_shop;
 
    /* other info */

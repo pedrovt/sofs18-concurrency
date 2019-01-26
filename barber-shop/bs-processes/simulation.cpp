@@ -121,13 +121,19 @@ static void go()
       check(client != NULL, "client to associate with process can't be null");
       
       pid_t id = pfork();
-      allClientsIds[i] = id;
       
+      allClientsIds[i] = id;
       // Child side: run Routine
       if (id == 0) {
+         printf("\033[92m Client process %d created\033[0m\n", allClientsIds[i]);
          client -> shop = shop_connect();
          main_client(client);
          shop_disconnect(shop);
+      }
+
+      else {
+         allClientsIds[i] = id;
+
       }
    }
 }
@@ -147,7 +153,7 @@ static void finish()
    for (int i = 0; i < global -> NUM_CLIENTS; i++)
    {
       pwaitpid(allClientsIds[i], &allClientsStatus[i], 0);
-      printf("Process %d returned\n", allClientsIds[i]);
+      printf("\033[92m Client process %d returned with status %d\033[0m\n", allClientsIds[i], allClientsStatus[i]);
    }
 
    printf("All clients done!");
@@ -156,8 +162,8 @@ static void finish()
    
    // ? verify [finalization]
    /* TODO UP NUM_BARBERS of semaphore num clients in benches */
-   for (int i = 0; i < global -> NUM_BARBERS; i++) {
-      up(shop ->sem_num_clients_in_benches);
+   for (int i = 0; i <= global -> NUM_BARBERS; i++) {
+      up(shop -> sem_num_clients_in_benches);
    }
 
    // printf("Waiting for barber processes to return\n");
