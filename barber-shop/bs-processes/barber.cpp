@@ -257,14 +257,6 @@ static void wait_for_client(Barber* barber)
       
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       
-      //! TEMP FIX   if (barber-> shop -> opened) should work
-      /*if (client.clientID == 0) {
-         unlock(barber -> shop -> mtx_clients_benches);  
-         debug_function_run_log(barber -> logId, barber -> id, "Returning");
-         barber->clientID = -1;
-         return;
-      }
-      */
       barber->clientID = client.clientID;
       barber->reqToDo  = client.request;
       
@@ -277,12 +269,12 @@ static void wait_for_client(Barber* barber)
       debug_function_run_log(barber -> logId, barber -> id, concat_3str("End of Critical zone! After next_client_in_benches, client id is: ", int2str(client.clientID), "\n"));
 
       /* 3. receive and greet client */ 
-      if (client.clientID > 0)
+      if (client.clientID > 0)      //! TEMP FIX
         receive_and_greet_client(barber->shop, barber->id, client.clientID);
+      
    }
 }
 
-// ? verify [finalization]
 static int work_available(Barber* barber)
 {
    /** TODO:
@@ -297,7 +289,7 @@ static int work_available(Barber* barber)
       debug_function_run_log(barber -> logId, barber -> id, "Shop closed");
       
       /* down do sem�foro com # clientes nas benches */
-      //down(barber -> shop -> sem_num_clients_in_benches);
+      down(barber -> shop -> sem_num_clients_in_benches);                        //! DOWN
       
       /* critical zone */
       debug_function_run_log(barber -> logId, barber -> id, "Critical zone! Going to lock");
@@ -316,7 +308,6 @@ static int work_available(Barber* barber)
    debug_function_run_log(barber -> logId, barber -> id, concat_2str("Result is ", int2str(res)));
    return res;
 }
-
 
 static void rise_from_barber_bench(Barber* barber){
    /** TODO:
@@ -368,8 +359,8 @@ static void process_requests_from_client(Barber* barber)
    /* Critical zones: 
     * 2+ barbers reserving material (chairs/tools/washbasins) 
     */
-   int numRequests = 3;	                        // Milestone 1 = 1
-   int requests[3] = {WASH_HAIR_REQ, HAIRCUT_REQ, SHAVE_REQ};  
+   int numRequests = 3;	                        
+   int requests[numRequests] = {WASH_HAIR_REQ, HAIRCUT_REQ, SHAVE_REQ};  
   
    // for each request
    for (int i = 0; i < numRequests; i++) {
@@ -500,6 +491,7 @@ static void process_requests_from_client(Barber* barber)
       }
    }
 
+   barber -> state = NONE;
    log_barber(barber);  // (if necessary) more than one in proper places!!!
 
    //ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
