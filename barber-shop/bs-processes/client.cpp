@@ -265,7 +265,7 @@ static void select_requests(Client* client)
    client -> state = SELECTING_REQUESTS;
 
    // Requests are a value from 1 to 7 (3 bits <=> 3 services)
-   /*if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
+   if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
    {
       client -> requests = (client -> requests) | HAIRCUT_REQ;
    }
@@ -276,7 +276,7 @@ static void select_requests(Client* client)
    if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
    {
       client -> requests = (client -> requests) | SHAVE_REQ;
-   }*/
+   }
 
    if (client -> requests == 0) {
       client -> requests = WASH_HAIR_REQ;
@@ -384,7 +384,9 @@ static void rise_from_client_benches(Client* client)
    log_client(client);
 
    up(client -> shop -> sem_num_free_benches_pos);
-   down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFYkkkkkkk
+   debug_function_run_log(client -> logId, client -> id, "after up(client -> shop -> sem_num_free_benches_pos)");
+   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFYkkkkkkk
+   debug_function_run_log(client -> logId, client -> id, "after down(client -> shop -> sem_num_clients_in_benches)");
 
    ensure (!seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," can't be seated in benches"));
 

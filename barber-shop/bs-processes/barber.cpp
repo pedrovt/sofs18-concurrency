@@ -349,11 +349,11 @@ static void process_requests_from_client(Barber* barber)
    //! Critical zone, several barbers reserving
 
    //? ANY SIMPLER WAY TO OBTAIN THIS INFO?
-   //int requests[3] = {HAIRCUT_REQ, SHAVE_REQ, WASH_HAIR_REQ};
-   int requests = WASH_HAIR_REQ;
+   int requests[3] = {HAIRCUT_REQ, SHAVE_REQ, WASH_HAIR_REQ};
+   //int requests = WASH_HAIR_REQ;
    // for each request
-   //for (int i = 0; i < 3; i++) {
-      int request = requests;
+   for (int i = 0; i < 3; i++) {
+      int request = requests[i];
 
       // if it's actually a request from the client
       if ((barber->reqToDo & request) != 0){
@@ -384,7 +384,9 @@ static void process_requests_from_client(Barber* barber)
             while (num_available_barber_chairs(barber->shop) <= 0){
                // TODO wait if there's no available barber chairs
             }
+            send_log(barber->logId, (char*)"[process_request] before reserving barber chair");
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
+            send_log(barber->logId, (char*)"[process_request] after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -398,19 +400,23 @@ static void process_requests_from_client(Barber* barber)
             // pick scissor
             barber -> state = REQ_SCISSOR;
             log_barber(barber);
-            while(barber->shop->toolsPot.availScissors <= 0){
+            while(barber -> shop -> toolsPot.availScissors <= 0){
                // TODO wait if there's no available scissors
             }
+            send_log(barber->logId, (char*)"[process_request] before picking scissor");
             pick_scissor(&barber->shop->toolsPot);
+            send_log(barber->logId, (char*)"[process_request] after picking scissor");
             barber->tools = barber->tools | SCISSOR_TOOL;
 
             // pick comb
             barber -> state = REQ_COMB;
             log_barber(barber);
-            while(barber->shop->toolsPot.availCombs <= 0){
+            while(barber -> shop -> toolsPot.availCombs <= 0){
                // TODO wait if there's no available combs
             }
+            send_log(barber->logId, (char*)"[process_request] before picking comb");
             pick_comb(&barber->shop->toolsPot);
+            send_log(barber->logId, (char*)"[process_request] ater picking comb");
             barber->tools = barber->tools | COMB_TOOL;
          }
          else if(request == SHAVE_REQ) {     // shave requires a razor
@@ -420,34 +426,42 @@ static void process_requests_from_client(Barber* barber)
             while(barber->shop->toolsPot.availRazors <= 0){
                // TODO wait if there's no available razors
             }
-            pick_razor(&barber->shop->toolsPot);
-            barber->tools = barber->tools | RAZOR_TOOL;
+            send_log(barber->logId, (char*)"[process_request] before picking razor");
+            pick_razor(&barber -> shop -> toolsPot);
+            send_log(barber->logId, (char*)"[process_request] after picking razor");
+            barber -> tools = barber->tools | RAZOR_TOOL;
          }
 
          // process requests
          if (request == SHAVE_REQ)   {
+         	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
             process_shave_request(barber);
          }
          else if (request == HAIRCUT_REQ) {
+         	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
             process_haircut_request(barber);
          }
-         else if (request == WASH_HAIR_REQ)
+         else if (request == WASH_HAIR_REQ){
             process_hairwash_request(barber);
+         }
          
          // return the used tools to the pot (if any)
          if (request == HAIRCUT_REQ) {
             // drop scissor
+            send_log(barber->logId, (char*)"[process_request] dropping scissor");
             return_scissor(&barber -> shop -> toolsPot);
             barber -> tools = barber -> tools & !SCISSOR_TOOL;
             log_barber(barber);
 
             // drop comb
+            send_log(barber->logId, (char*)"[process_request] dropping comb");
             return_comb(&barber -> shop -> toolsPot);
             barber -> tools = barber -> tools & !COMB_TOOL;
             log_barber(barber);
          }
          else if (request == SHAVE_REQ){
             // drop razor
+            send_log(barber->logId, (char*)"[process_request] dropping razor");
             return_razor(&barber -> shop -> toolsPot);
             barber -> tools = barber -> tools & !RAZOR_TOOL;
             log_barber(barber);
@@ -460,7 +474,7 @@ static void process_requests_from_client(Barber* barber)
          }
          log_barber(barber);
       }
-   //}
+   }
 
 
    release_client(barber);
@@ -512,6 +526,9 @@ static void process_haircut_request(Barber* barber)
    require (barber->tools & SCISSOR_TOOL, "barber not holding a scissor");
    require (barber->tools & COMB_TOOL, "barber not holding a comb");
 
+   barber->state = CUTTING;
+   log_barber(barber);
+
    int steps = random_int(5,20);
    int slice = (global->MAX_WORK_TIME_UNITS-global->MIN_WORK_TIME_UNITS+steps)/steps;
    int complete = 0;
@@ -534,6 +551,9 @@ static void process_hairwash_request(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
 
+   barber->state = WASHING;
+   log_barber(barber);
+
    int steps = random_int(5,20);
    int slice = (global->MAX_WORK_TIME_UNITS-global->MIN_WORK_TIME_UNITS+steps)/steps;
    int complete = 0;
@@ -554,6 +574,9 @@ static void process_shave_request(Barber* barber)
     **/
    require (barber != NULL, "barber argument required");
    require (barber->tools & RAZOR_TOOL, "barber not holding a razor");
+
+   barber->state = SHAVING;
+   log_barber(barber);
 
    int steps = random_int(5,20);
    int slice = (global->MAX_WORK_TIME_UNITS-global->MIN_WORK_TIME_UNITS+steps)/steps;
