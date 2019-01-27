@@ -67,6 +67,10 @@ typedef struct _BarberShop_
    int mtx_clients_to_barbers_ids;        // clients to barbers ids
    int mtx_washbasins;
    int mtx_barber_chairs;
+   //Items mutexes
+   int mtx_items_scissors;
+   int mtx_items_combs;
+   int mtx_items_razors;
    
    /* sync semaphores */
    int sem_num_clients_in_benches;        // # clients	     in clients benches
@@ -77,6 +81,10 @@ typedef struct _BarberShop_
    int sem_num_washbasins;
    int sem_num_barber_chairs;
    int sem_client_leave_shop;
+   //Items semaphores
+   int sem_num_items_scissors;
+   int sem_num_items_combs;
+   int sem_num_items_razors;
 
    /* other info */
    int barber_to_client_ids[MAX_CLIENTS]; // client ID -> barber ID 

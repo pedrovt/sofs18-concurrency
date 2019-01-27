@@ -249,7 +249,7 @@ static void select_requests(Client* client)
    client -> state = SELECTING_REQUESTS;
 
    // Requests are a value from 1 to 7 (3 bits <=> 3 services)
-   int milestone1 = 1;
+   int milestone1 = 0;
    
    if (milestone1) {
       client -> requests = WASH_HAIR_REQ;
