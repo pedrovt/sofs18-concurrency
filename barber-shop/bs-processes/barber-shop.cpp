@@ -177,7 +177,10 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> mtx_clients_to_barbers_ids, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_washbasins, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_barber_chairs, 0, IPC_RMID, NULL);
-   
+   psemctl(shop -> mtx_items_scissors, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_items_combs, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_items_razors, 0, IPC_RMID, NULL);
+
    /* destroy sync semaphores */
    psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_free_benches_pos, 0, IPC_RMID, NULL);
@@ -187,6 +190,9 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> sem_num_washbasins, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_barber_chairs, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_client_leave_shop, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_items_scissors, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_items_combs, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_items_razors, 0, IPC_RMID, NULL);
 }
 
 // #############################################################################
