@@ -364,14 +364,14 @@ static void process_requests_from_client(Barber* barber)
             log_barber(barber); //confirm if it's the best place 
 
             debug_function_run_log(barber->logId, barber -> id, "before reserving washbasin");
-            down(barber->shop->sem_num_washbasins);
             lock(barber->shop->mtx_washbasins, 0);
+            down(barber->shop->sem_num_washbasins);
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
-            unlock(barber->shop->mtx_washbasins, 0);
             debug_function_run_log(barber->logId, barber -> id, "after reserving washbasin");
 
             barber->basinPosition = basinPosition;
             set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
+            unlock(barber->shop->mtx_washbasins, 0);
          }
 
          /* Not Wash Request -> Reserve the barber chair */
@@ -380,14 +380,14 @@ static void process_requests_from_client(Barber* barber)
             log_barber(barber); //confirm if it's the best place
 
             debug_function_run_log(barber->logId, barber -> id, "before reserving barber chair");
-            down(barber->shop->sem_num_barber_chairs);
             lock(barber->shop->mtx_barber_chairs, 0);
+            down(barber->shop->sem_num_barber_chairs);
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-			unlock(barber->shop->mtx_barber_chairs, 0);
 			debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
+            unlock(barber->shop->mtx_barber_chairs, 0);
          }
 
          /* inform client on the service to be performed */
@@ -399,8 +399,8 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = REQ_SCISSOR;
             log_barber(barber);
             debug_function_run_log(barber->logId, barber -> id, "before picking scissor");
-            down(barber->shop->sem_num_items_scissors);  //requests scissors and waits until they are available
             lock(barber->shop->mtx_items_scissors);
+            down(barber->shop->sem_num_items_scissors);  //requests scissors and waits until they are available
             pick_scissor(&barber->shop->toolsPot);
             unlock(barber->shop->mtx_items_scissors);
             debug_function_run_log(barber->logId, barber -> id, "after picking scissor");
@@ -410,8 +410,8 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = REQ_COMB;
             log_barber(barber);
             debug_function_run_log(barber->logId, barber -> id, "before picking comb");
-            down(barber->shop->sem_num_items_combs);
             lock(barber->shop->mtx_items_combs);
+            down(barber->shop->sem_num_items_combs);
             pick_comb(&barber->shop->toolsPot);
             unlock(barber->shop->mtx_items_combs);
             debug_function_run_log(barber->logId, barber -> id, "after picking comb");
@@ -422,8 +422,8 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = REQ_RAZOR;
             log_barber(barber);
             debug_function_run_log(barber->logId, barber -> id, "before picking razor");
-            down(barber->shop->sem_num_items_razors);
             lock(barber->shop->mtx_items_razors);
+            down(barber->shop->sem_num_items_razors);
             pick_razor(&barber -> shop -> toolsPot);
             unlock(barber->shop->mtx_items_razors);
             debug_function_run_log(barber->logId, barber -> id, "after picking razor");
@@ -432,21 +432,21 @@ static void process_requests_from_client(Barber* barber)
 
          /* process requests */
          if (request == SHAVE_REQ)   {
-            lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
+            //lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
+         	//unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          	process_shave_request(barber);
-            unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          }
          else if (request == HAIRCUT_REQ) {
-            lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
+            //lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
+         	//unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          	process_haircut_request(barber);
-            unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          }
          else if (request == WASH_HAIR_REQ){
-         	lock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
+         	//lock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
             process_hairwash_request(barber);
-            unlock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
+            //unlock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
          }
          
          /* wait for end of the request */
@@ -457,10 +457,10 @@ static void process_requests_from_client(Barber* barber)
          if (request == HAIRCUT_REQ) {
             // drop scissor
             debug_function_run_log(barber->logId, barber -> id, "dropping scissor");
+            up(barber->shop->sem_num_items_scissors);
             lock(barber->shop->mtx_items_scissors);
             return_scissor(&barber -> shop -> toolsPot);
             unlock(barber->shop->mtx_items_scissors);
-            up(barber->shop->sem_num_items_scissors);
             barber -> tools = barber -> tools & !SCISSOR_TOOL;
             log_barber(barber);
 
@@ -476,10 +476,10 @@ static void process_requests_from_client(Barber* barber)
          else if (request == SHAVE_REQ){
             // drop razor
             debug_function_run_log(barber->logId, barber -> id, "dropping razor");
+            up(barber->shop->sem_num_items_razors);
             lock(barber->shop->mtx_items_razors);
             return_razor(&barber -> shop -> toolsPot);
             unlock(barber->shop->mtx_items_razors);
-            up(barber->shop->sem_num_items_razors);
             barber -> tools = barber -> tools & !RAZOR_TOOL;
             log_barber(barber);
          }
