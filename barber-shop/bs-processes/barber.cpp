@@ -289,7 +289,7 @@ static int work_available(Barber* barber)
    if (!shop_opened(barber -> shop)) {
       debug_function_run_log(barber -> logId, barber -> id, "Shop closed");
       
-      /* down do semï¿½foro com # clientes nas benches */
+      /* down do semáforo com # clientes nas benches */
       down(barber -> shop -> sem_num_clients_in_benches);                        //! DOWN
       
       /* critical zone */
@@ -397,8 +397,8 @@ static void process_requests_from_client(Barber* barber)
             down(barber->shop->sem_num_barber_chairs);
             lock(barber->shop->mtx_barber_chairs);
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-			unlock(barber->shop->mtx_barber_chairs);
-			debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
+			   unlock(barber->shop->mtx_barber_chairs);
+			   debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -446,12 +446,16 @@ static void process_requests_from_client(Barber* barber)
 
          // process requests
          if (request == SHAVE_REQ)   {
+            lock (barber -> shop -> mtx_barber_chairs);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
             process_shave_request(barber);
+            unlock(barber->shop->mtx_barber_chairs);
          }
          else if (request == HAIRCUT_REQ) {
+            lock (barber -> shop -> mtx_barber_chairs);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
             process_haircut_request(barber);
+            unlock(barber->shop->mtx_barber_chairs);
          }
          else if (request == WASH_HAIR_REQ){
             process_hairwash_request(barber);
@@ -512,7 +516,6 @@ static void process_requests_from_client(Barber* barber)
    //ensure (!is_client_inside(barber -> shop, barber -> clientID), "client must leave the barber shop");
 }
 
-// TODO VERIFY
 static void release_client(Barber* barber)
 {
    /** TODO:

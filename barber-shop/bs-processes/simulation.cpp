@@ -154,7 +154,7 @@ static void finish()
    close_shop(shop);
    
    /* update semaphore num clients in benches */
-   for (int i = 0; i <= global -> NUM_BARBERS; i++) {
+   for (int i = 0; i <= MAX_BARBERS; i++) {
       up(shop -> sem_num_clients_in_benches);
    }
 
