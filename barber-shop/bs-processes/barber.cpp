@@ -255,8 +255,6 @@ static void wait_for_client(Barber* barber)
       //send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Client Benches queue is empty? ", int2str(empty_client_queue(&benches_queue))));
 
       log_client_benches(client_benches(barber->shop));
-
-      debug_function_run_log(barber->logId, barber -> id, "getting item from client queue");
       
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       
@@ -299,7 +297,6 @@ static int work_available(Barber* barber)
       lock(barber -> shop -> mtx_clients_benches);	                              //! LOCK
       
       // retirar elemento da fila 
-      debug_function_run_log(barber->logId, barber -> id, "getting item from client queue");
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       res = client.clientID;
 
@@ -380,12 +377,12 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = WAITING_WASHBASIN;
             log_barber(barber); //confirm if it's the best place 
 
-            lock(barber->shop->mtx_washbasins);
-            down(barber->shop->sem_num_washbasins);
             debug_function_run_log(barber->logId, barber -> id, "before reserving washbasin");
+            down(barber->shop->sem_num_washbasins);
+            lock(barber->shop->mtx_washbasins);
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
-            debug_function_run_log(barber->logId, barber -> id, "after reserving washbasin");
             unlock(barber->shop->mtx_washbasins);
+            debug_function_run_log(barber->logId, barber -> id, "after reserving washbasin");
 
             barber->basinPosition = basinPosition;
             set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
@@ -396,12 +393,12 @@ static void process_requests_from_client(Barber* barber)
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber); //confirm if it's the best place
 
-            lock(barber->shop->mtx_barber_chairs);
-            down(barber->shop->sem_num_barber_chairs);
             debug_function_run_log(barber->logId, barber -> id, "before reserving barber chair");
+            down(barber->shop->sem_num_barber_chairs);
+            lock(barber->shop->mtx_barber_chairs);
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-            debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 			unlock(barber->shop->mtx_barber_chairs);
+			debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -415,22 +412,22 @@ static void process_requests_from_client(Barber* barber)
             // pick scissor
             barber -> state = REQ_SCISSOR;
             log_barber(barber);
-            while(barber -> shop -> toolsPot.availScissors <= 0){
-               // TODO wait if there's no available scissors
-            }
             debug_function_run_log(barber->logId, barber -> id, "before picking scissor");
+            down(barber->shop->sem_num_items_scissors); //requests scissors and waits until they are available
+            lock(barber->shop->mtx_items_scissors);
             pick_scissor(&barber->shop->toolsPot);
+            unlock(barber->shop->mtx_items_scissors);
             debug_function_run_log(barber->logId, barber -> id, "after picking scissor");
             barber->tools = barber->tools | SCISSOR_TOOL;
 
             // pick comb
             barber -> state = REQ_COMB;
             log_barber(barber);
-            while(barber -> shop -> toolsPot.availCombs <= 0){
-               // TODO wait if there's no available combs
-            }
             debug_function_run_log(barber->logId, barber -> id, "before picking comb");
+            down(barber->shop->sem_num_items_combs);
+            lock(barber->shop->mtx_items_combs);
             pick_comb(&barber->shop->toolsPot);
+            unlock(barber->shop->mtx_items_combs);
             debug_function_run_log(barber->logId, barber -> id, "after picking comb");
             barber->tools = barber->tools | COMB_TOOL;
          }
@@ -438,11 +435,11 @@ static void process_requests_from_client(Barber* barber)
             // pick razor
             barber -> state = REQ_RAZOR;
             log_barber(barber);
-            while(barber->shop->toolsPot.availRazors <= 0){
-               // TODO wait if there's no available razors
-            }
             debug_function_run_log(barber->logId, barber -> id, "before picking razor");
+            down(barber->shop->sem_num_items_razors);
+            lock(barber->shop->mtx_items_razors);
             pick_razor(&barber -> shop -> toolsPot);
+            unlock(barber->shop->mtx_items_razors);
             debug_function_run_log(barber->logId, barber -> id, "after picking razor");
             barber -> tools = barber->tools | RAZOR_TOOL;
          }
@@ -464,33 +461,44 @@ static void process_requests_from_client(Barber* barber)
          if (request == HAIRCUT_REQ) {
             // drop scissor
             debug_function_run_log(barber->logId, barber -> id, "dropping scissor");
+            lock(barber->shop->mtx_items_scissors);
             return_scissor(&barber -> shop -> toolsPot);
+            unlock(barber->shop->mtx_items_scissors);
+            up(barber->shop->sem_num_items_scissors);
             barber -> tools = barber -> tools & !SCISSOR_TOOL;
             log_barber(barber);
 
             // drop comb
             debug_function_run_log(barber->logId, barber -> id, "dropping comb");
+            lock(barber->shop->mtx_items_combs);
             return_comb(&barber -> shop -> toolsPot);
+            unlock(barber->shop->mtx_items_combs);
+            up(barber->shop->sem_num_items_combs);
             barber -> tools = barber -> tools & !COMB_TOOL;
             log_barber(barber);
          }
          else if (request == SHAVE_REQ){
             // drop razor
             debug_function_run_log(barber->logId, barber -> id, "dropping razor");
+            lock(barber->shop->mtx_items_razors);
             return_razor(&barber -> shop -> toolsPot);
+            unlock(barber->shop->mtx_items_razors);
+            up(barber->shop->sem_num_items_razors);
             barber -> tools = barber -> tools & !RAZOR_TOOL;
             log_barber(barber);
          }
 
          //Releases the barber and the client from the chair
          if (is_barber_chair_service(&service)){
-         	debug_function_run_log(barber->logId, barber -> id, "releasing barber_chair");
+            lock(barber->shop->mtx_barber_chairs);
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
+            unlock(barber->shop->mtx_barber_chairs);
             up(barber->shop->sem_num_barber_chairs);
          }
          else{
-         	debug_function_run_log(barber->logId, barber -> id, "releasin washbasin");
+            lock(barber->shop->mtx_washbasins);
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
+            unlock(barber->shop->mtx_washbasins);
             up(barber->shop->sem_num_washbasins);
          }
          log_barber(barber);

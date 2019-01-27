@@ -89,6 +89,9 @@ void shop_sems_create(BarberShop* shop)
    shop -> mtx_clients_to_barbers_ids = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_washbasins = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_barber_chairs = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_items_scissors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_items_combs = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_items_razors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* create sync semaphores */
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
@@ -99,6 +102,9 @@ void shop_sems_create(BarberShop* shop)
    shop -> sem_num_washbasins         = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL); 
    shop -> sem_num_barber_chairs 	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);  
    shop -> sem_client_leave_shop      = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_items_scissors     = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_items_combs        = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_items_razors       = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* initialize mutex semaphores */
    unlock(shop -> mtx_shop);
@@ -107,6 +113,9 @@ void shop_sems_create(BarberShop* shop)
    unlock(shop -> mtx_clients_to_barbers_ids);
    unlock(shop -> mtx_washbasins);
    unlock(shop -> mtx_barber_chairs);
+   unlock(shop -> mtx_items_scissors);
+   unlock(shop -> mtx_items_combs);
+   unlock(shop -> mtx_items_razors);
    
    /* initialize sync semaphores */
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
@@ -121,6 +130,18 @@ void shop_sems_create(BarberShop* shop)
       up(shop -> sem_num_barber_chairs);
    }
 
+   for(int i = 0; i < global -> NUM_SCISSORS; i++){
+       up(shop -> sem_num_items_scissors);
+   }
+
+   for(int i = 0; i < global -> NUM_COMBS; i++){
+       up(shop -> sem_num_items_combs);
+   }
+
+   for(int i = 0; i < global -> NUM_RAZORS; i++){
+       up(shop -> sem_num_items_razors);
+   }
+
    /* post-conditions for mutex semaphores */
    ensure(shop -> mtx_shop > 0, "mtx_shop semaphore not created");
    ensure(shop -> mtx_barber_benches  > 0, "mtx_barber_benches semaphore not created");
@@ -128,6 +149,9 @@ void shop_sems_create(BarberShop* shop)
    ensure(shop -> mtx_clients_to_barbers_ids > 0, "mtx_clients_to_barbers_ids semaphore not created");
    ensure(shop -> mtx_washbasins > 0, "mtx_washbasins semaphore not created");
    ensure(shop -> mtx_barber_chairs > 0, "mtx_washbasins semaphore not created");
+   ensure(shop -> mtx_items_scissors > 0, "mtx_items_scissors semaphore not created");
+   ensure(shop -> mtx_items_combs > 0,"mtx_items_combs semaphore not created");
+   ensure(shop -> mtx_items_razors > 0, "mtx_items_razors semaphore not created");
 
    /* post-conditions for sync semaphores */
    ensure(shop -> sem_num_clients_in_benches > 0, "sem_num_clients_in_benches semaphore not created");
@@ -138,6 +162,9 @@ void shop_sems_create(BarberShop* shop)
    ensure(shop -> sem_num_washbasins > 0, "sem_num_washbasins semaphore not created");
    ensure(shop -> sem_num_barber_chairs > 0, "sem_num_washbasins semaphore not created");
    ensure(shop -> sem_client_leave_shop > 0, "sem_num_washbasins semaphore not created");
+   ensure(shop -> sem_num_items_scissors > 0, "sem_num_items_scissors semaphore not created");
+   ensure(shop -> sem_num_items_combs > 0, "sem_num_items_combs semaphore not created");
+   ensure(shop -> sem_num_items_razors > 0, "sem_num_items_razors semaphore not created");
 }
 
 /* semaphores destruction */
