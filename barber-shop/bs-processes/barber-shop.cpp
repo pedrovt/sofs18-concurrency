@@ -20,6 +20,20 @@ static char skel[skel_length];
 
 static int shmid = -1;
 
+/* Disclaimer
+ * We understand - and agree - that some operations 
+ * using semaphores (lock/unlock, up/down) should be
+ * part of the modules such as ClientBenches, BarberBench,
+ * BarberChair, etc. and BarberShop and NOT part of
+ * the barber and client modules (since it is not a modular
+ * approach and we can have new types of active entities in
+ * the future). 
+ * We opted not to change our code to follow that guideline
+ * to better use the remaining time in testing and debugging
+ * of small bugs. 
+ * For consistency purposes, we opted to have all semaphores 
+ * created and destroyed in the barbershop. 
+ */
 
 // #############################################################################
 // Service Array
@@ -510,10 +524,8 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    /* update sync semaphore */
    down(shop -> sem_service_announce, barberID-1);
 
-   //lock(shop->mtx_shop);
    Service res = get_service(shop, barberID-1);
 
-   //unlock(shop->mtx_shop);
    return res;
 }
 
@@ -523,9 +535,7 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   //lock(shop->mtx_shop);
    set_service(shop, service_barber_id(&service) - 1, &service);
-   //unlock(shop->mtx_shop);
 
    /* update sync semaphore */
    up(shop -> sem_service_announce, ((&service)->barberID)-1);
