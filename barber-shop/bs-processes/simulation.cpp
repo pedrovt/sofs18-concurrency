@@ -92,48 +92,43 @@ static void go()
    send_log(logIdClientsDesc, (char*)descText);
    show_barber_shop(shop);
 
-   /* create the clients and barbers processes */
+   /* Launch Barbers Processes */
    for (int i = 0; i < global -> NUM_BARBERS; i++) 
    {
       log_barber(allBarbers + i);
-      
-      // Launch Barbers.Routine to run is main_barber()     
+ 
       Barber* barber = &allBarbers[i];
       check(barber != NULL, "barber to associate with process can't be null");
       
       pid_t id = pfork();
       allBarbersIds[i] = id;
 
-      // Child side: run Routine
+      /* Child side: run main_barber */
       if (id == 0) {
          barber->shop=shop_connect();
          main_barber(barber);
          shop_disconnect(barber->shop);
+         exit(0);
       }
    }
 
+   /* Launch Clients Processes */
    for (int i = 0; i < global -> NUM_CLIENTS; i++) 
    {
       log_client(allClients + i);
     
-      // Launch Clients. Routine to run is main_client()
       Client* client = &allClients[i];
       check(client != NULL, "client to associate with process can't be null");
       
-      pid_t id = pfork();
-      
+      pid_t id = pfork();      
       allClientsIds[i] = id;
-      // Child side: run Routine
+      
+      /* Child side: run main_client routine */
       if (id == 0) {
-         printf("\033[92m Client process %d created\033[0m\n", allClientsIds[i]);
          client -> shop = shop_connect();
          main_client(client);
          shop_disconnect(shop);
-      }
-
-      else {
-         allClientsIds[i] = id;
-
+         exit(0);
       }
    }
 }
@@ -149,28 +144,24 @@ static void finish()
    int allBarbersStatus[global->NUM_BARBERS];
    int allClientsStatus[global->NUM_CLIENTS];
 
-   // printf("Waiting for clients processes to return\n");
+   /* wait for clients termination */
    for (int i = 0; i < global -> NUM_CLIENTS; i++)
    {
       pwaitpid(allClientsIds[i], &allClientsStatus[i], 0);
-      printf("\033[92m Client process %d returned with status %d\033[0m\n", allClientsIds[i], allClientsStatus[i]);
    }
 
-   printf("All clients done!");
    /* by now all clients have finished */
    close_shop(shop);
    
-   // ? verify [finalization]
-   /* TODO UP NUM_BARBERS of semaphore num clients in benches */
+   /* update semaphore num clients in benches */
    for (int i = 0; i <= global -> NUM_BARBERS; i++) {
       up(shop -> sem_num_clients_in_benches);
    }
 
-   // printf("Waiting for barber processes to return\n");
+   /* wait for barbers termination */
    for (int i = 0; i < global -> NUM_BARBERS; i++)
    {
       pwaitpid(allBarbersIds[i], &allBarbersStatus[i], 0);
-      // printf("Process %d returned\n", allBarbersIds[i]);
    }
    
    shop_sems_destroy(shop);
