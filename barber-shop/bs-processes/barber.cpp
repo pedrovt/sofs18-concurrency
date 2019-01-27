@@ -434,14 +434,14 @@ static void process_requests_from_client(Barber* barber)
          if (request == SHAVE_REQ)   {
             lock (barber -> shop -> mtx_barber_chairs);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-            process_shave_request(barber);
             unlock(barber->shop->mtx_barber_chairs);
+            process_shave_request(barber);
          }
          else if (request == HAIRCUT_REQ) {
             lock (barber -> shop -> mtx_barber_chairs);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-            process_haircut_request(barber);
             unlock(barber->shop->mtx_barber_chairs);
+            process_haircut_request(barber);
          }
          else if (request == WASH_HAIR_REQ){
             process_hairwash_request(barber);
