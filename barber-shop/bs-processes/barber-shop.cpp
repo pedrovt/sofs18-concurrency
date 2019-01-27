@@ -121,6 +121,7 @@ void shop_sems_create(BarberShop* shop)
    shop -> sem_num_items_combs        = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_items_razors       = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_barber_requests_done   = psemget(IPC_PRIVATE, MAX_BARBERS, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_ready                  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* initialize mutex semaphores */
    unlock(shop -> mtx_shop);
@@ -192,6 +193,7 @@ void shop_sems_create(BarberShop* shop)
    ensure(shop -> sem_num_items_combs > 0, "sem_num_items_combs semaphore not created");
    ensure(shop -> sem_num_items_razors > 0, "sem_num_items_razors semaphore not created");
    ensure(shop -> sem_barber_requests_done > 0, "sem_barber_requests_done semaphore not created");
+   ensure(shop -> sem_ready > 0, "sem_barber_requests_done semaphore not created");
 }
 
 /* semaphores destruction */
@@ -222,6 +224,7 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> sem_num_items_combs, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_items_razors, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_barber_requests_done, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_ready, 0, IPC_RMID, NULL);
 }
 
 // #############################################################################

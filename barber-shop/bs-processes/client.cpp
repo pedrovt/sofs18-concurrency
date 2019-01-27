@@ -380,6 +380,7 @@ static void wait_all_services_done(Client* client)
    require (client != NULL, "client argument required");
    
    while(client->requests != 0){
+      up(client -> shop -> sem_ready);
       client -> state = WAITING_SERVICE;
       log_client(client);
       debug_function_run_log(client -> logId, client -> id, "before getting service");

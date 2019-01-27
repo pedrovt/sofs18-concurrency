@@ -85,6 +85,7 @@ typedef struct _BarberShop_
    int sem_num_items_combs;
    int sem_num_items_razors;
    int sem_barber_requests_done;
+   int sem_ready;
    
    /* other info */
    int barber_to_client_ids[MAX_CLIENTS]; // client ID -> barber ID 
