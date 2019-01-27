@@ -399,8 +399,8 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = REQ_SCISSOR;
             log_barber(barber);
             debug_function_run_log(barber->logId, barber -> id, "before picking scissor");
-            lock(barber->shop->mtx_items_scissors);
             down(barber->shop->sem_num_items_scissors);  //requests scissors and waits until they are available
+            lock(barber->shop->mtx_items_scissors);
             pick_scissor(&barber->shop->toolsPot);
             unlock(barber->shop->mtx_items_scissors);
             debug_function_run_log(barber->logId, barber -> id, "after picking scissor");
@@ -410,8 +410,8 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = REQ_COMB;
             log_barber(barber);
             debug_function_run_log(barber->logId, barber -> id, "before picking comb");
-            lock(barber->shop->mtx_items_combs);
             down(barber->shop->sem_num_items_combs);
+            lock(barber->shop->mtx_items_combs);
             pick_comb(&barber->shop->toolsPot);
             unlock(barber->shop->mtx_items_combs);
             debug_function_run_log(barber->logId, barber -> id, "after picking comb");
@@ -422,8 +422,8 @@ static void process_requests_from_client(Barber* barber)
             barber -> state = REQ_RAZOR;
             log_barber(barber);
             debug_function_run_log(barber->logId, barber -> id, "before picking razor");
-            lock(barber->shop->mtx_items_razors);
             down(barber->shop->sem_num_items_razors);
+            lock(barber->shop->mtx_items_razors);
             pick_razor(&barber -> shop -> toolsPot);
             unlock(barber->shop->mtx_items_razors);
             debug_function_run_log(barber->logId, barber -> id, "after picking razor");
