@@ -276,7 +276,7 @@ static int work_available(Barber* barber)
    if (!shop_opened(barber -> shop)) {
       debug_function_run_log(barber -> logId, barber -> id, "Shop closed");
       
-      /* down do semáforo com # clientes nas benches */
+      /* down do sem?oro com # clientes nas benches */
       down(barber -> shop -> sem_num_clients_in_benches);                        //! DOWN
       
       /* critical zone */
@@ -365,9 +365,9 @@ static void process_requests_from_client(Barber* barber)
 
             debug_function_run_log(barber->logId, barber -> id, "before reserving washbasin");
             down(barber->shop->sem_num_washbasins);
-            lock(barber->shop->mtx_washbasins);
+            lock(barber->shop->mtx_washbasins, 0);
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
-            unlock(barber->shop->mtx_washbasins);
+            unlock(barber->shop->mtx_washbasins, 0);
             debug_function_run_log(barber->logId, barber -> id, "after reserving washbasin");
 
             barber->basinPosition = basinPosition;
@@ -381,10 +381,10 @@ static void process_requests_from_client(Barber* barber)
 
             debug_function_run_log(barber->logId, barber -> id, "before reserving barber chair");
             down(barber->shop->sem_num_barber_chairs);
-            lock(barber->shop->mtx_barber_chairs);
+            lock(barber->shop->mtx_barber_chairs, 0);
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-			   unlock(barber->shop->mtx_barber_chairs);
-			   debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
+			unlock(barber->shop->mtx_barber_chairs, 0);
+			debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
@@ -432,19 +432,21 @@ static void process_requests_from_client(Barber* barber)
 
          /* process requests */
          if (request == SHAVE_REQ)   {
-            lock (barber -> shop -> mtx_barber_chairs);
+            lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-            unlock(barber->shop->mtx_barber_chairs);
-            process_shave_request(barber);
+         	process_shave_request(barber);
+            unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          }
          else if (request == HAIRCUT_REQ) {
-            lock (barber -> shop -> mtx_barber_chairs);
+            lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-            unlock(barber->shop->mtx_barber_chairs);
-            process_haircut_request(barber);
+         	process_haircut_request(barber);
+            unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          }
          else if (request == WASH_HAIR_REQ){
+         	lock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
             process_hairwash_request(barber);
+            unlock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
          }
          
          /* return the used tools to the pot (if any) */
@@ -480,15 +482,15 @@ static void process_requests_from_client(Barber* barber)
 
          /* releases the barber and the client from the chair */
          if (is_barber_chair_service(&service)){
-            lock(barber->shop->mtx_barber_chairs);
+            lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
-            unlock(barber->shop->mtx_barber_chairs);
+            unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
             up(barber->shop->sem_num_barber_chairs);
          }
          else{
-            lock(barber->shop->mtx_washbasins);
+            lock(barber->shop->mtx_washbasins, barber -> basinPosition);
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
-            unlock(barber->shop->mtx_washbasins);
+            unlock(barber->shop->mtx_washbasins, barber -> basinPosition);
             up(barber->shop->sem_num_washbasins);
          }
          log_barber(barber);

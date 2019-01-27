@@ -62,6 +62,9 @@ static void wait_all_services_done(Client* client);
 static char* to_string_client(Client* client);
 
 // #############################################################################
+// Our functions and fields
+
+// #############################################################################
 // Getters & other util functions
 // No need to change these
 size_t sizeof_client()
@@ -176,7 +179,7 @@ static char *to_string_client(Client *client)
 }
 
 // #############################################################################
-// Functions to be developed
+// Functions to (maybe) be developed
 static void notify_client_birth(Client* client)
 {
    require (client != NULL, "client argument required");
@@ -197,6 +200,9 @@ static void notify_client_death(Client* client)
 
    debug_function_run_log(client->logId, client->id, "Going to die");
 }
+
+// #############################################################################
+// Functions to be developed
 
 static void wandering_outside(Client* client)
 {
@@ -243,7 +249,7 @@ static void select_requests(Client* client)
 
    client -> state = SELECTING_REQUESTS;
 
-   /* Requests are a value from 1 to 7 (3 bits <=> 3 services) */
+   // Requests are a value from 1 to 7 (3 bits <=> 3 services)
    int milestone1 = 0;
    
    if (milestone1) {
@@ -293,7 +299,16 @@ static void wait_its_turn(Client* client)
    /* 2. enter barbershop */
 
    /* wait for an empty seat (down semaphore with number of positions) */
+   
+   /*int sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
+   send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
+   */
    down(client -> shop -> sem_num_free_benches_pos);
+
+   /*
+   sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
+   send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
+   */
 
    /* when the code reaches this point, we know there is
     * at least 1 free position in the client benches */
@@ -315,7 +330,7 @@ static void wait_its_turn(Client* client)
    unlock(client -> shop -> mtx_clients_benches);                                // ! UNLOCK
    debug_function_run_log(client -> logId, client -> id, "End of critical zone! after unlock");
 
-   /* update (up) semaphore with number of clients in benches */
+   /* TODO up semaphore with number of clients in benches */
    up(client -> shop -> sem_num_clients_in_benches);                             // ! UP
 
    client -> benchesPosition = benchesPosition;
@@ -351,6 +366,8 @@ static void rise_from_client_benches(Client* client)
    client->benchesPosition = -1;    // In valid position, ie not in the bench
 
    /* update # free positions in benches and number clients in benches semaphores */
+   //up(client -> shop -> sem_num_free_benches_pos);
+   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFY
    debug_function_run_log(client -> logId, client -> id, "After semaphores updates");
    
    unlock(client -> shop -> mtx_clients_benches);                                // !UNLOCK
@@ -379,6 +396,7 @@ static void wait_all_services_done(Client* client)
 
    require (client != NULL, "client argument required");
    
+   // TODO for
    while(client->requests != 0){
       client -> state = WAITING_SERVICE;
       log_client(client);
@@ -421,7 +439,7 @@ static void wait_all_services_done(Client* client)
    debug_function_run_log(client -> logId, client -> id, "Before leaving shop");
    leave_barber_shop(client -> shop, client -> id);
    debug_function_run_log(client -> logId, client -> id, "after leaving shop");
-   log_client(client); 
+   log_client(client); // more than one in proper places!!!
 
    ensure (!is_client_inside(client -> shop, client -> id), "client must leave the barber shop");
 }

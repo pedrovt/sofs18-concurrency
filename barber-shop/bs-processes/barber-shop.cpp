@@ -87,8 +87,8 @@ void shop_sems_create(BarberShop* shop)
    shop -> mtx_barber_benches  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_to_barbers_ids = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> mtx_washbasins = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> mtx_barber_chairs = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_washbasins = psemget(IPC_PRIVATE, MAX_WASHBASINS+1, 0600 | IPC_CREAT | IPC_EXCL);			// index 0 will be used to block access to all of them
+   shop -> mtx_barber_chairs = psemget(IPC_PRIVATE, MAX_BARBER_CHAIRS+1, 0600 | IPC_CREAT | IPC_EXCL);		// index 0 will be used to block access to all of them
    shop -> mtx_items_scissors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_items_combs = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_items_razors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
@@ -111,8 +111,12 @@ void shop_sems_create(BarberShop* shop)
    unlock(shop -> mtx_barber_benches);
    unlock(shop -> mtx_clients_benches);
    unlock(shop -> mtx_clients_to_barbers_ids);
-   unlock(shop -> mtx_washbasins);
-   unlock(shop -> mtx_barber_chairs);
+   for (int i = 0; i < global -> NUM_WASHBASINS+1; i++){
+   	unlock(shop -> mtx_washbasins, i);
+   }
+   for (int i = 0; i < global -> NUM_BARBER_CHAIRS+1; i++){
+   	unlock(shop -> mtx_barber_chairs, i);
+   }
    unlock(shop -> mtx_items_scissors);
    unlock(shop -> mtx_items_combs);
    unlock(shop -> mtx_items_razors);
@@ -180,7 +184,7 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> mtx_items_scissors, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_items_combs, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_items_razors, 0, IPC_RMID, NULL);
-
+   
    /* destroy sync semaphores */
    psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_free_benches_pos, 0, IPC_RMID, NULL);
