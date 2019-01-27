@@ -357,17 +357,14 @@ static void process_requests_from_client(Barber* barber)
       /* if it's actually a request from the client */
       if ((barber->reqToDo & request) != 0){
          Service service;
-
          /* Wash Request -> Reserve the basin */
          if (request == WASH_HAIR_REQ) {
             barber -> state = WAITING_WASHBASIN;
             log_barber(barber); //confirm if it's the best place 
 
             debug_function_run_log(barber->logId, barber -> id, "before reserving washbasin");
-            lock(barber->shop->mtx_washbasins, 0);
             down(barber->shop->sem_num_washbasins);
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
-            unlock(barber->shop->mtx_washbasins, 0);
             debug_function_run_log(barber->logId, barber -> id, "after reserving washbasin");
 
             barber->basinPosition = basinPosition;
@@ -378,12 +375,9 @@ static void process_requests_from_client(Barber* barber)
          else {
             barber->state = WAITING_BARBER_SEAT;
             log_barber(barber); //confirm if it's the best place
-
             debug_function_run_log(barber->logId, barber -> id, "before reserving barber chair");
-            lock(barber->shop->mtx_barber_chairs, 0);
             down(barber->shop->sem_num_barber_chairs);
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-            unlock(barber->shop->mtx_barber_chairs, 0);
 			      debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
