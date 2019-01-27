@@ -380,7 +380,6 @@ static void wait_all_services_done(Client* client)
    require (client != NULL, "client argument required");
    
    while(client->requests != 0){
-      up(client -> shop -> sem_ready);
       client -> state = WAITING_SERVICE;
       log_client(client);
       debug_function_run_log(client -> logId, client -> id, "before getting service");
@@ -397,6 +396,7 @@ static void wait_all_services_done(Client* client)
          client -> state = HAVING_A_HAIR_WASH;
          log_client(client);
          // wait to finish
+         up(client -> shop -> sem_ready);
          while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
             ;
          debug_function_run_log(client -> logId, client -> id, "before getting out of washbasin");
@@ -408,6 +408,7 @@ static void wait_all_services_done(Client* client)
          client->state = service.request == HAIRCUT_REQ ? HAVING_A_HAIRCUT : HAVING_A_SHAVE;
          log_client(client);
          // wait to finish
+         up(client -> shop -> sem_ready);
          while(!barber_chair_service_finished(barber_chair(client->shop, service_position(&service))))
             ;
          rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);

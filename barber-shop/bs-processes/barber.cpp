@@ -356,7 +356,6 @@ static void process_requests_from_client(Barber* barber)
 
       /* if it's actually a request from the client */
       if ((barber->reqToDo & request) != 0){
-      	 down(barber -> shop -> sem_ready);
          Service service;
          /* Wash Request -> Reserve the basin */
          if (request == WASH_HAIR_REQ) {
@@ -428,19 +427,22 @@ static void process_requests_from_client(Barber* barber)
          /* process requests */
          if (request == SHAVE_REQ)   {
          	down(barber -> shop -> sem_barber_requests_done, barber -> id);
-          	lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
+          lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
+          down(barber -> shop -> sem_ready);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
          	process_shave_request(barber);
          }
          else if (request == HAIRCUT_REQ) {
          	down(barber -> shop -> sem_barber_requests_done, barber -> id);
-          	lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
+          lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
+          down(barber -> shop -> sem_ready);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
          	process_haircut_request(barber);
          }
          else if (request == WASH_HAIR_REQ){
          	down(barber -> shop -> sem_barber_requests_done, barber -> id);
           	lock(barber->shop->mtx_washbasins, barber -> basinPosition);
+            down(barber -> shop -> sem_ready);
           	process_hairwash_request(barber);
          }
 
