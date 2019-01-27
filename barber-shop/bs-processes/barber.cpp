@@ -449,6 +449,10 @@ static void process_requests_from_client(Barber* barber)
             unlock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
          }
          
+         /* wait for end of the request */
+         down(barber -> shop -> sem_barber_requests_done, barber -> id);
+
+         /* request is finished here */
          /* return the used tools to the pot (if any) */
          if (request == HAIRCUT_REQ) {
             // drop scissor
@@ -532,9 +536,6 @@ static void done(Barber* barber)
 
 static void process_haircut_request(Barber* barber)
 {
-   /** TODO:
-    * ([incomplete] example code for task completion algorithm)
-    **/
    require (barber != NULL, "barber argument required");
    require (barber->tools & SCISSOR_TOOL, "barber not holding a scissor");
    require (barber->tools & COMB_TOOL, "barber not holding a comb");
@@ -554,14 +555,12 @@ static void process_haircut_request(Barber* barber)
       set_completion_barber_chair(barber_chair(barber->shop, barber->chairPosition), complete);
    }
 
+   up(barber -> shop -> sem_barber_requests_done, barber -> id);
    log_barber(barber);  
 }
 
 static void process_hairwash_request(Barber* barber)
 {
-   /** TODO:
-    * ([incomplete] example code for task completion algorithm)
-    **/
    require (barber != NULL, "barber argument required");
 
    barber->state = WASHING;
@@ -577,14 +576,13 @@ static void process_hairwash_request(Barber* barber)
          complete = 100;
       set_completion_washbasin(washbasin(barber->shop, barber->basinPosition), complete);
    }
+
+   up(barber -> shop -> sem_barber_requests_done, barber -> id);
    log_barber(barber);  
 }
 
 static void process_shave_request(Barber* barber)
 {
-   /** TODO:
-    * ([incomplete] example code for task completion algorithm)
-    **/
    require (barber != NULL, "barber argument required");
    require (barber->tools & RAZOR_TOOL, "barber not holding a razor");
 
@@ -602,5 +600,6 @@ static void process_shave_request(Barber* barber)
       set_completion_barber_chair(barber_chair(barber->shop, barber->chairPosition), complete);
    }
 
+   up(barber -> shop -> sem_barber_requests_done, barber -> id);
    log_barber(barber); 
 }
