@@ -351,6 +351,7 @@ static void rise_from_client_benches(Client* client)
    client->benchesPosition = -1;    // In valid position, ie not in the bench
 
    /* update # free positions in benches and number clients in benches semaphores */
+   up(client -> shop -> sem_num_free_benches_pos);
    debug_function_run_log(client -> logId, client -> id, "After semaphores updates");
    
    unlock(client -> shop -> mtx_clients_benches);                                // !UNLOCK

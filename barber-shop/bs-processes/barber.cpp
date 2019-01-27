@@ -227,7 +227,7 @@ static void wait_for_client(Barber* barber)
        * down semaphore with number of clients
        */
       down(barber -> shop -> sem_num_clients_in_benches);                        // ! DOWN
-      up(barber -> shop -> sem_num_free_benches_pos);
+      //up(barber -> shop -> sem_num_free_benches_pos);
 
       /* when the code reaches this point, we know there is
        * at least 1 client */
