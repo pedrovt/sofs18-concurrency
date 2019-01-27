@@ -432,25 +432,19 @@ static void process_requests_from_client(Barber* barber)
 
          /* process requests */
          if (request == SHAVE_REQ)   {
-            //lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
+         	down(barber -> shop -> sem_barber_requests_done, barber -> id);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-         	//unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          	process_shave_request(barber);
          }
          else if (request == HAIRCUT_REQ) {
-            //lock (barber -> shop -> mtx_barber_chairs, barber -> chairPosition);
+         	down(barber -> shop -> sem_barber_requests_done, barber -> id);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
-         	//unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          	process_haircut_request(barber);
          }
          else if (request == WASH_HAIR_REQ){
-         	//lock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
+         	down(barber -> shop -> sem_barber_requests_done, barber -> id);
             process_hairwash_request(barber);
-            //unlock (barber -> shop -> mtx_washbasins, barber -> basinPosition);
          }
-         
-         /* wait for end of the request */
-         down(barber -> shop -> sem_barber_requests_done, barber -> id);
 
          /* request is finished here */
          /* return the used tools to the pot (if any) */

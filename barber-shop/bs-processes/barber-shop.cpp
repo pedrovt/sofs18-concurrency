@@ -139,6 +139,10 @@ void shop_sems_create(BarberShop* shop)
    unlock(shop -> mtx_items_razors);
    
    /* initialize sync semaphores */
+   for (int i = 0; i < MAX_BARBERS; i++) {
+      up(shop -> sem_barber_requests_done, i);
+   }
+
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
       up(shop -> sem_num_free_benches_pos);
    }
