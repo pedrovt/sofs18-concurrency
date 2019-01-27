@@ -65,6 +65,7 @@ typedef struct _BarberShop_
    int mtx_barber_benches;                // barber benches
    int mtx_clients_benches;               // client benches
    int mtx_clients_to_barbers_ids;        // clients to barbers ids
+   int mtx_service_to_client;
    int mtx_washbasins;
    int mtx_barber_chairs;
    //Items mutexes

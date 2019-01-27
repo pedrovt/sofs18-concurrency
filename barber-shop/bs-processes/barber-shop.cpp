@@ -101,6 +101,7 @@ void shop_sems_create(BarberShop* shop)
    shop -> mtx_barber_benches  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_to_barbers_ids = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_service_to_client = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_washbasins = psemget(IPC_PRIVATE, MAX_WASHBASINS+1, 0600 | IPC_CREAT | IPC_EXCL);			// index 0 will be used to block access to all of them
    shop -> mtx_barber_chairs = psemget(IPC_PRIVATE, MAX_BARBER_CHAIRS+1, 0600 | IPC_CREAT | IPC_EXCL);		// index 0 will be used to block access to all of them
    shop -> mtx_items_scissors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
@@ -125,6 +126,7 @@ void shop_sems_create(BarberShop* shop)
    unlock(shop -> mtx_barber_benches);
    unlock(shop -> mtx_clients_benches);
    unlock(shop -> mtx_clients_to_barbers_ids);
+   unlock(shop -> mtx_service_to_client);
    for (int i = 0; i < global -> NUM_WASHBASINS+1; i++){
    	unlock(shop -> mtx_washbasins, i);
    }
@@ -165,6 +167,7 @@ void shop_sems_create(BarberShop* shop)
    ensure(shop -> mtx_barber_benches  > 0, "mtx_barber_benches semaphore not created");
    ensure(shop -> mtx_clients_benches > 0, "mtx_clients_benches semaphore not created");
    ensure(shop -> mtx_clients_to_barbers_ids > 0, "mtx_clients_to_barbers_ids semaphore not created");
+   ensure(shop -> mtx_service_to_client > 0, "mtx_clients_to_barbers_ids semaphore not created");
    ensure(shop -> mtx_washbasins > 0, "mtx_washbasins semaphore not created");
    ensure(shop -> mtx_barber_chairs > 0, "mtx_washbasins semaphore not created");
    ensure(shop -> mtx_items_scissors > 0, "mtx_items_scissors semaphore not created");
@@ -193,6 +196,7 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> mtx_barber_benches , 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_to_barbers_ids, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_service_to_client, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_washbasins, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_barber_chairs, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_items_scissors, 0, IPC_RMID, NULL);
@@ -523,8 +527,10 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
 
    /* update sync semaphore */
    down(shop -> sem_service_announce, barberID-1);
-
+   
+   lock(shop -> mtx_service_to_client);
    Service res = get_service(shop, barberID-1);
+   unlock(shop -> mtx_service_to_client);
 
    return res;
 }
@@ -535,7 +541,9 @@ void inform_client_on_service(BarberShop* shop, Service service)
     * function called from a barber, expecting to inform a client of its next service
     **/
 
+   lock(shop -> mtx_service_to_client);
    set_service(shop, service_barber_id(&service) - 1, &service);
+   unlock(shop -> mtx_service_to_client);
 
    /* update sync semaphore */
    up(shop -> sem_service_announce, ((&service)->barberID)-1);
