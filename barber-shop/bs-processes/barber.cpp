@@ -347,7 +347,6 @@ static void process_requests_from_client(Barber* barber)
    /* Critical zones: 
     * 2+ barbers reserving material (chairs/tools/washbasins) 
     */
-   down(barber -> shop -> sem_ready);
    int numRequests = 3;	                        
    int requests[numRequests] = {WASH_HAIR_REQ, HAIRCUT_REQ, SHAVE_REQ};  
   
@@ -357,6 +356,7 @@ static void process_requests_from_client(Barber* barber)
 
       /* if it's actually a request from the client */
       if ((barber->reqToDo & request) != 0){
+      	 down(barber -> shop -> sem_ready);
          Service service;
          /* Wash Request -> Reserve the basin */
          if (request == WASH_HAIR_REQ) {
