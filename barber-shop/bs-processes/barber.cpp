@@ -219,6 +219,7 @@ static void wait_for_client(Barber* barber)
    
    /* 1. set the client state */
    barber -> state = WAITING_CLIENTS;
+   log_barber(barber);
 
    /* check for simulation termination */
    if (barber-> shop -> opened) {
@@ -254,6 +255,8 @@ static void wait_for_client(Barber* barber)
       //send_log(barber->logId, concat_3str(int2str(barber->id), "[wait_for_client] Client Benches queue is empty? ", int2str(empty_client_queue(&benches_queue))));
 
       log_client_benches(client_benches(barber->shop));
+
+      debug_function_run_log(barber->logId, barber -> id, "getting item from client queue");
       
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       
@@ -296,6 +299,7 @@ static int work_available(Barber* barber)
       lock(barber -> shop -> mtx_clients_benches);	                              //! LOCK
       
       // retirar elemento da fila 
+      debug_function_run_log(barber->logId, barber -> id, "getting item from client queue");
       RQItem client = next_client_in_benches(client_benches(barber->shop));
       res = client.clientID;
 
@@ -480,10 +484,12 @@ static void process_requests_from_client(Barber* barber)
 
          //Releases the barber and the client from the chair
          if (is_barber_chair_service(&service)){
+         	debug_function_run_log(barber->logId, barber -> id, "releasing barber_chair");
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
             up(barber->shop->sem_num_barber_chairs);
          }
          else{
+         	debug_function_run_log(barber->logId, barber -> id, "releasin washbasin");
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
             up(barber->shop->sem_num_washbasins);
          }

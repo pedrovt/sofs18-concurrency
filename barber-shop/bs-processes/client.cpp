@@ -187,6 +187,7 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
+   debug_function_run_log(client->logId, client->id, "Will be born");
 }
 
 static void notify_client_death(Client* client)
@@ -293,6 +294,7 @@ static void wait_its_turn(Client* client)
 
    /* 1. set the client state */
    client -> state = WAITING_ITS_TURN;
+   log_client(client);
 
    /* 2. enter barbershop */
 
