@@ -398,8 +398,7 @@ static void wait_all_services_done(Client* client)
          log_client(client);
          // wait to finish
          up(client -> shop -> sem_ready);
-         while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
-            ;
+         down(client -> shop -> sem_service_completion, (client -> barberID)-1);
          debug_function_run_log(client -> logId, client -> id, "before getting out of washbasin");
          rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
          debug_function_run_log(client -> logId, client -> id, "after getting out of washbasin");
@@ -410,14 +409,12 @@ static void wait_all_services_done(Client* client)
          log_client(client);
          // wait to finish
          up(client -> shop -> sem_ready);
-         while(!barber_chair_service_finished(barber_chair(client->shop, service_position(&service))))
-            ;
+         down(client -> shop -> sem_service_completion, (client -> barberID)-1);
          rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);
       }
       debug_function_run_log(client -> logId, client -> id, "Service done");
       log_client(client);
       client->requests -= service_request(&service);
-      down(client -> shop -> sem_service_completion, (client -> barberID)-1);
    }
    client -> state = DONE;
    down(client -> shop -> sem_client_leave_shop);

@@ -490,7 +490,6 @@ static void process_requests_from_client(Barber* barber)
             up(barber->shop->sem_num_washbasins);
          }
          log_barber(barber);
-         up(barber -> shop -> sem_service_completion, (barber -> id)-1);
       }
    }
 
@@ -546,7 +545,7 @@ static void process_haircut_request(Barber* barber)
          complete = 100;
       set_completion_barber_chair(barber_chair(barber->shop, barber->chairPosition), complete);
    }
-
+   up(barber -> shop -> sem_service_completion, (barber -> id)-1);
    up(barber -> shop -> sem_barber_requests_done, barber -> id);
    log_barber(barber);  
 }
@@ -568,7 +567,7 @@ static void process_hairwash_request(Barber* barber)
          complete = 100;
       set_completion_washbasin(washbasin(barber->shop, barber->basinPosition), complete);
    }
-
+   up(barber -> shop -> sem_service_completion, (barber -> id)-1);
    up(barber -> shop -> sem_barber_requests_done, barber -> id);
    log_barber(barber);  
 }
@@ -591,7 +590,7 @@ static void process_shave_request(Barber* barber)
          complete = 100;
       set_completion_barber_chair(barber_chair(barber->shop, barber->chairPosition), complete);
    }
-
+   up(barber -> shop -> sem_service_completion, (barber -> id)-1);
    up(barber -> shop -> sem_barber_requests_done, barber -> id);
    log_barber(barber); 
 }
