@@ -367,11 +367,11 @@ static void process_requests_from_client(Barber* barber)
             lock(barber->shop->mtx_washbasins, 0);
             down(barber->shop->sem_num_washbasins);
             int basinPosition = reserve_random_empty_washbasin(barber -> shop, barber -> id);
+            unlock(barber->shop->mtx_washbasins, 0);
             debug_function_run_log(barber->logId, barber -> id, "after reserving washbasin");
 
             barber->basinPosition = basinPosition;
             set_washbasin_service(&service, barber->id, barber->clientID, basinPosition);
-            unlock(barber->shop->mtx_washbasins, 0);
          }
 
          /* Not Wash Request -> Reserve the barber chair */
@@ -383,11 +383,11 @@ static void process_requests_from_client(Barber* barber)
             lock(barber->shop->mtx_barber_chairs, 0);
             down(barber->shop->sem_num_barber_chairs);
             int chairPosition = reserve_random_empty_barber_chair(barber->shop, barber->id);
-			debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
+            unlock(barber->shop->mtx_barber_chairs, 0);
+			      debug_function_run_log(barber->logId, barber -> id, "after reserving barber chair");
 
             barber -> chairPosition = chairPosition;
             set_barber_chair_service(&service, barber->id, barber->clientID, chairPosition, request);
-            unlock(barber->shop->mtx_barber_chairs, 0);
          }
 
          /* inform client on the service to be performed */
@@ -433,17 +433,20 @@ static void process_requests_from_client(Barber* barber)
          /* process requests */
          if (request == SHAVE_REQ)   {
          	down(barber -> shop -> sem_barber_requests_done, barber -> id);
+          lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
          	process_shave_request(barber);
          }
          else if (request == HAIRCUT_REQ) {
          	down(barber -> shop -> sem_barber_requests_done, barber -> id);
+          lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
          	set_tools_barber_chair(&barber->shop->barberChair[barber->chairPosition], barber->tools);
          	process_haircut_request(barber);
          }
          else if (request == WASH_HAIR_REQ){
          	down(barber -> shop -> sem_barber_requests_done, barber -> id);
-            process_hairwash_request(barber);
+          lock(barber->shop->mtx_washbasins, barber -> basinPosition);
+          process_hairwash_request(barber);
          }
 
          /* request is finished here */
@@ -480,13 +483,11 @@ static void process_requests_from_client(Barber* barber)
 
          /* releases the barber and the client from the chair */
          if (is_barber_chair_service(&service)){
-            lock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
             release_barber_chair(barber_chair(barber->shop, barber->chairPosition), barber->id);
             unlock(barber->shop->mtx_barber_chairs, barber -> chairPosition);
             up(barber->shop->sem_num_barber_chairs);
          }
          else{
-            lock(barber->shop->mtx_washbasins, barber -> basinPosition);
             release_washbasin(washbasin(barber->shop, barber->basinPosition), barber->id);
             unlock(barber->shop->mtx_washbasins, barber -> basinPosition);
             up(barber->shop->sem_num_washbasins);
