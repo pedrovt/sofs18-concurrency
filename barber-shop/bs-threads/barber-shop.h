@@ -85,6 +85,9 @@ typedef struct _BarberShop_
    pthread_mutex_t razorCR = PTHREAD_MUTEX_INITIALIZER; // Para os razors
    pthread_cond_t razor_returnCD = PTHREAD_COND_INITIALIZER;
 
+   pthread_mutex_t waitingCR = PTHREAD_MUTEX_INITIALIZER; // Para evitar busywaiting enquanto os clientes esperam que o servico acabe
+   pthread_cond_t waitingCD = PTHREAD_COND_INITIALIZER;
+
 } BarberShop;
 
 int num_lines_barber_shop(BarberShop* shop);

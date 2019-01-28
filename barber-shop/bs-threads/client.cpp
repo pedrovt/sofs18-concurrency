@@ -316,13 +316,19 @@ static void wait_all_services_done(Client* client)
          sit_in_barber_chair(barber_chair(client->shop,service_position(&service)), client->id);
          client->state = service.request == SHAVE_REQ ? HAVING_A_SHAVE : HAVING_A_HAIRCUT;
          log_client(client);
-         while(!barber_chair_service_finished(barber_chair(client->shop,service_position(&service))));
+         pthread_mutex_lock(&client->shop->waitingCR);
+         while(!barber_chair_service_finished(barber_chair(client->shop,service_position(&service))))
+            pthread_cond_wait(&client->shop->waitingCD, &client->shop->waitingCR);
+         pthread_mutex_unlock(&client->shop->waitingCR);
          rise_from_barber_chair(barber_chair(client->shop,service_position(&service)), client->id);
       } else {
          sit_in_washbasin(washbasin(client->shop, service_position(&service)), client->id);
          client->state = HAVING_A_HAIR_WASH;
          log_client(client);
-         while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))));
+         pthread_mutex_lock(&client->shop->waitingCR);
+         while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
+            pthread_cond_wait(&client->shop->waitingCD, &client->shop->waitingCR);
+         pthread_mutex_unlock(&client->shop->waitingCR);
          rise_from_washbasin(washbasin(client->shop, service_position(&service)), client->id);
       }
       client->requests -= service_request(&service);

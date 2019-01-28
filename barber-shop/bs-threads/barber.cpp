@@ -403,6 +403,7 @@ static void process_resquests_from_client(Barber* barber)
             process_hairwash_request(barber);
          else
             process_shave_request(barber);
+         pthread_cond_broadcast(&barber->shop->waitingCD);
 
          drop_tools(barber, services[i]);
 
@@ -421,6 +422,7 @@ static void process_resquests_from_client(Barber* barber)
             barber->basinPosition = -1;
          }
 
+         barber->reqToDo -= services[i];
          log_barber(barber);
       }
    }
