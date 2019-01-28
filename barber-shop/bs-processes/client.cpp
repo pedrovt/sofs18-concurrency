@@ -62,9 +62,6 @@ static void wait_all_services_done(Client* client);
 static char* to_string_client(Client* client);
 
 // #############################################################################
-// Our functions and fields
-
-// #############################################################################
 // Getters & other util functions
 // No need to change these
 size_t sizeof_client()
@@ -179,7 +176,7 @@ static char *to_string_client(Client *client)
 }
 
 // #############################################################################
-// Functions to (maybe) be developed
+// Functions to be developed
 static void notify_client_birth(Client* client)
 {
    require (client != NULL, "client argument required");
@@ -187,12 +184,9 @@ static void notify_client_birth(Client* client)
    /** TODO:
     * 1: (if necessary) inform simulation that a new client begins its existence.
     **/
-   
-   if (client->state == NONE)
-      log_client(client);
+   debug_function_run_log(client->logId, client->id, "Will be born");
 }
 
-// TODO [FINISH SIMULATION] verify if it's needed
 static void notify_client_death(Client* client)
 {
    /** TODO:
@@ -201,23 +195,8 @@ static void notify_client_death(Client* client)
 
    require (client != NULL, "client argument required");
 
-   if (client -> state == NONE)
-      log_client(client);
-
-   /* decrease the number of active clients */
-   /*send_log(client->logId, (char *)"[notify_client_death] going to lock");
-   lock(get_mtxid_id(client->shop));
-
-   int old_value = client -> shop -> numActiveClients;
-   client -> shop -> numActiveClients = old_value - 1 ;
-
-   send_log(client->logId, (char *)"[notify_client_death] going to unlock");
-   unlock(get_mtxid_id(client->shop));
-   */
+   debug_function_run_log(client->logId, client->id, "Going to die");
 }
-
-// #############################################################################
-// Functions to be developed
 
 static void wandering_outside(Client* client)
 {
@@ -264,22 +243,30 @@ static void select_requests(Client* client)
 
    client -> state = SELECTING_REQUESTS;
 
-   // Requests are a value from 1 to 7 (3 bits <=> 3 services)
-   /*if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
-   {
-      client -> requests = (client -> requests) | HAIRCUT_REQ;
-   }
-   if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
-   {
-      client -> requests = (client -> requests) | WASH_HAIR_REQ;
-   }
-   if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
-   {
-      client -> requests = (client -> requests) | SHAVE_REQ;
-   }*/
-
-   if (client -> requests == 0) {
+   /* Requests are a value from 1 to 7 (3 bits <=> 3 services) */
+   int milestone1 = 0;
+   
+   if (milestone1) {
       client -> requests = WASH_HAIR_REQ;
+   }
+
+   else {
+      if (random_int(1, 100) <= global -> PROB_REQUEST_HAIRCUT) 
+      {
+         client -> requests = (client -> requests) | HAIRCUT_REQ;
+      }
+      if (random_int(1, 100) <= global -> PROB_REQUEST_WASHHAIR)
+      {
+         client -> requests = (client -> requests) | WASH_HAIR_REQ;
+      }
+      if (random_int(1, 100) <= global -> PROB_REQUEST_SHAVE)
+      {
+         client -> requests = (client -> requests) | SHAVE_REQ;
+      }
+
+      if (client -> requests == 0) {
+         client -> requests = WASH_HAIR_REQ;
+      }
    }
    
    ensure(((client->requests) >= 1 && (client->requests) <= 7), concat_2str("invalid client request ", int2str(client->requests)));
@@ -301,20 +288,12 @@ static void wait_its_turn(Client* client)
 
    /* 1. set the client state */
    client -> state = WAITING_ITS_TURN;
+   log_client(client);
 
    /* 2. enter barbershop */
 
    /* wait for an empty seat (down semaphore with number of positions) */
-   
-   /*int sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
-   send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
-   */
    down(client -> shop -> sem_num_free_benches_pos);
-
-   /*
-   sem_val = psemctl(get_sem_num_free_benches_pos(client->shop), 0, GETVAL); // for debug purposes
-   send_log(client->logId, concat_2str("[wait_its_turn] #free benches is: ", int2str(sem_val)));
-   */
 
    /* when the code reaches this point, we know there is
     * at least 1 free position in the client benches */
@@ -334,10 +313,10 @@ static void wait_its_turn(Client* client)
    debug_function_run_log(client -> logId, client -> id, concat_2str("After enter barbershop, benches position is: ", int2str(benchesPosition)));
 
    unlock(client -> shop -> mtx_clients_benches);                                // ! UNLOCK
-   send_log(client->logId, (char *)"[wait_its_turn] End of critical zone! after unlock");
+   debug_function_run_log(client -> logId, client -> id, "End of critical zone! after unlock");
 
-   /* TODO up semaphore with number of clients in benches */
-   up(client -> shop -> sem_num_clients_in_benches);                         // ! UP
+   /* update (up) semaphore with number of clients in benches */
+   up(client -> shop -> sem_num_clients_in_benches);                             // ! UP
 
    client -> benchesPosition = benchesPosition;
    
@@ -353,7 +332,6 @@ static void wait_its_turn(Client* client)
    log_client(client);
 }
 
-// TODO finish friday
 static void rise_from_client_benches(Client* client)
 {
    /** TODO:
@@ -362,33 +340,29 @@ static void rise_from_client_benches(Client* client)
    require (client != NULL, "client argument required");
    require (seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," not seated in benches"));
 
-   send_log(client->logId, (char*)"[rise_from_client_benches] before semaphores updates");
-
-   /* update # free positions in benches and number clients in benches semaphores */
-   up(client -> shop -> sem_num_free_benches_pos);
-   //down(client -> shop -> sem_num_clients_in_benches);      // TODO VERIFY
-
-   send_log(client->logId, (char*)"[rise_from_client_benches] after semaphores updates");
-
+   debug_function_run_log(client -> logId, client -> id, "Going to rise from client bench");
 
    /* remove client from client benches 
     * Critical Zone: 2+ clients rising at the same time
     */
-   lock(client -> shop -> mtx_clients_benches);
+   lock(client -> shop -> mtx_clients_benches);                                  // !LOCK
 
    rise_client_benches(client_benches(client -> shop), client -> benchesPosition, client -> id);
-   client->benchesPosition = -1;    // Invalid position, ie not in the bench
+   client->benchesPosition = -1;    // In valid position, ie not in the bench
 
-   unlock(client -> shop -> mtx_clients_benches);
+   /* update # free positions in benches and number clients in benches semaphores */
+   up(client -> shop -> sem_num_free_benches_pos);
+   debug_function_run_log(client -> logId, client -> id, "After semaphores updates");
+   
+   unlock(client -> shop -> mtx_clients_benches);                                // !UNLOCK
 
-   send_log(client->logId, (char*)"[rise_from_client_benches] has risen from client bench");
+   debug_function_run_log(client -> logId, client -> id, "Has risen from client bench");
+   log_client(client);
 
    ensure (!seated_in_client_benches(client_benches(client->shop), client->id), concat_3str("client ",int2str(client->id)," can't be seated in benches"));
 
 }
 
-// #############################################################################
-// TODO after friday
 static void wait_all_services_done(Client* client)
 {
    /** TODO:
@@ -406,46 +380,48 @@ static void wait_all_services_done(Client* client)
 
    require (client != NULL, "client argument required");
    
-   // TODO for
    while(client->requests != 0){
       client -> state = WAITING_SERVICE;
       log_client(client);
-      send_log(client->logId, (char*)"[wait_all_services_done] before getting service");
+      debug_function_run_log(client -> logId, client -> id, "before getting service");
       Service service = wait_service_from_barber(client -> shop, client -> barberID);
-      send_log(client->logId, (char*)"[wait_all_services_done] after getting service");
+      debug_function_run_log(client -> logId, client -> id, "after getting service");
       client -> state = WAITING_SERVICE_START;
       log_client(client);
 
       // define destination
       if (is_washbasin_service(&service)) {     // washbasin (hair wash)
-      	 send_log(client->logId, (char*)"[wait_all_services_done] before sitting in washbasin");
+      	 debug_function_run_log(client -> logId, client -> id, "before sitting in washbasin");
          sit_in_washbasin(&(client -> shop -> washbasin[service_position(&service)]), client -> id);
-         send_log(client->logId, (char*)"[wait_all_services_done] after sitting in washbasin");
+         debug_function_run_log(client -> logId, client -> id, "after sitting in washbasin");
          client -> state = HAVING_A_HAIR_WASH;
          log_client(client);
          // wait to finish
-         while(!washbasin_service_finished(washbasin(client->shop, service_position(&service))))
-            ;
-         send_log(client->logId, (char*)"[wait_all_services_done] Service finished");
+         up(client -> shop -> sem_ready);
+         down(client -> shop -> sem_service_completion, (client -> barberID)-1);
+         debug_function_run_log(client -> logId, client -> id, "before getting out of washbasin");
          rise_from_washbasin(washbasin(client -> shop, service_position(&service)), client -> id);
-         send_log(client->logId, (char*)"[wait_all_services_done] after getting out of washbasin");
+         debug_function_run_log(client -> logId, client -> id, "after getting out of washbasin");
       }
       else if(is_barber_chair_service(&service)) {                                    // chair (haircut, chair)
          sit_in_barber_chair(&(client -> shop -> barberChair[service_position(&service)]), client->id);
          client->state = service.request == HAIRCUT_REQ ? HAVING_A_HAIRCUT : HAVING_A_SHAVE;
          log_client(client);
          // wait to finish
-         while(!barber_chair_service_finished(barber_chair(client->shop, service_position(&service))))
-            ;
+         up(client -> shop -> sem_ready);
+         down(client -> shop -> sem_service_completion, (client -> barberID)-1);
          rise_from_barber_chair(barber_chair(client -> shop, service_position(&service)), client -> id);
       }
-      send_log(client->logId, (char*)"[wait_all_services_done] Service done");
-      client -> state = DONE;
+      debug_function_run_log(client -> logId, client -> id, "Service done");
       log_client(client);
       client->requests -= service_request(&service);
    }
-   send_log(client->logId, (char*)"[wait_all_services_done] Before leaving shop");
+   client -> state = DONE;
+   down(client -> shop -> sem_client_leave_shop);
+   debug_function_run_log(client -> logId, client -> id, "Before leaving shop");
    leave_barber_shop(client -> shop, client -> id);
-   send_log(client->logId, (char*)"[wait_all_services_done] after leaving shop");
-   log_client(client); // more than one in proper places!!!
+   debug_function_run_log(client -> logId, client -> id, "after leaving shop");
+   log_client(client); 
+
+   ensure (!is_client_inside(client -> shop, client -> id), "client must leave the barber shop");
 }

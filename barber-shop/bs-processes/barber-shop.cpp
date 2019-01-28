@@ -20,6 +20,20 @@ static char skel[skel_length];
 
 static int shmid = -1;
 
+/* Disclaimer
+ * We understand - and agree - that some operations 
+ * using semaphores (lock/unlock, up/down) should be
+ * part of the modules such as ClientBenches, BarberBench,
+ * BarberChair, etc. and BarberShop and NOT part of
+ * the barber and client modules (since it is not a modular
+ * approach and we can have new types of active entities in
+ * the future). 
+ * We opted not to change our code to follow that guideline
+ * to better use the remaining time in testing and debugging
+ * of small bugs. 
+ * For consistency purposes, we opted to have all semaphores 
+ * created and destroyed in the barbershop. 
+ */
 
 // #############################################################################
 // Service Array
@@ -87,36 +101,99 @@ void shop_sems_create(BarberShop* shop)
    shop -> mtx_barber_benches  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> mtx_clients_to_barbers_ids = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
-   
+   shop -> mtx_service_to_client = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_washbasins = psemget(IPC_PRIVATE, MAX_WASHBASINS+1, 0600 | IPC_CREAT | IPC_EXCL);			// index 0 will be used to block access to all of them
+   shop -> mtx_barber_chairs = psemget(IPC_PRIVATE, MAX_BARBER_CHAIRS+1, 0600 | IPC_CREAT | IPC_EXCL);		// index 0 will be used to block access to all of them
+   shop -> mtx_items_scissors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_items_combs = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> mtx_items_razors = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+
    /* create sync semaphores */
    shop -> sem_num_clients_in_benches = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_num_free_benches_pos	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
    shop -> sem_client_to_barber_ids   = psemget(IPC_PRIVATE, MAX_CLIENTS, 0600 | IPC_CREAT | IPC_EXCL);
-   shop -> sem_service_announce		  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_service_announce		  = psemget(IPC_PRIVATE, MAX_BARBERS, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_service_completion	  = psemget(IPC_PRIVATE, MAX_BARBERS, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_washbasins         = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL); 
+   shop -> sem_num_barber_chairs 	  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);  
+   shop -> sem_client_leave_shop      = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_items_scissors     = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_items_combs        = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_num_items_razors       = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_barber_requests_done   = psemget(IPC_PRIVATE, MAX_BARBERS, 0600 | IPC_CREAT | IPC_EXCL);
+   shop -> sem_ready                  = psemget(IPC_PRIVATE, 1, 0600 | IPC_CREAT | IPC_EXCL);
 
    /* initialize mutex semaphores */
    unlock(shop -> mtx_shop);
    unlock(shop -> mtx_barber_benches);
    unlock(shop -> mtx_clients_benches);
    unlock(shop -> mtx_clients_to_barbers_ids);
+   unlock(shop -> mtx_service_to_client);
+   for (int i = 0; i < global -> NUM_WASHBASINS+1; i++){
+   	unlock(shop -> mtx_washbasins, i);
+   }
+   for (int i = 0; i < global -> NUM_BARBER_CHAIRS+1; i++){
+   	unlock(shop -> mtx_barber_chairs, i);
+   }
+   unlock(shop -> mtx_items_scissors);
+   unlock(shop -> mtx_items_combs);
+   unlock(shop -> mtx_items_razors);
    
    /* initialize sync semaphores */
+   for (int i = 0; i < MAX_BARBERS; i++) {
+      up(shop -> sem_barber_requests_done, i);
+   }
+
    for (int i = 0; i < global ->NUM_CLIENT_BENCHES_SEATS; i++) {
-      unlock(shop -> sem_num_free_benches_pos);
+      up(shop -> sem_num_free_benches_pos);
+   }
+
+   for(int i = 0; i < global -> NUM_WASHBASINS; i++){
+      up(shop -> sem_num_washbasins);
+   }
+
+   for(int i = 0; i < global -> NUM_BARBER_CHAIRS; i++){
+      up(shop -> sem_num_barber_chairs);
+   }
+
+   for(int i = 0; i < global -> NUM_SCISSORS; i++){
+       up(shop -> sem_num_items_scissors);
+   }
+
+   for(int i = 0; i < global -> NUM_COMBS; i++){
+       up(shop -> sem_num_items_combs);
+   }
+
+   for(int i = 0; i < global -> NUM_RAZORS; i++){
+       up(shop -> sem_num_items_razors);
    }
 
    /* post-conditions for mutex semaphores */
-   // todo verify the correct pos condition
    ensure(shop -> mtx_shop > 0, "mtx_shop semaphore not created");
    ensure(shop -> mtx_barber_benches  > 0, "mtx_barber_benches semaphore not created");
    ensure(shop -> mtx_clients_benches > 0, "mtx_clients_benches semaphore not created");
    ensure(shop -> mtx_clients_to_barbers_ids > 0, "mtx_clients_to_barbers_ids semaphore not created");
+   ensure(shop -> mtx_service_to_client > 0, "mtx_clients_to_barbers_ids semaphore not created");
+   ensure(shop -> mtx_washbasins > 0, "mtx_washbasins semaphore not created");
+   ensure(shop -> mtx_barber_chairs > 0, "mtx_washbasins semaphore not created");
+   ensure(shop -> mtx_items_scissors > 0, "mtx_items_scissors semaphore not created");
+   ensure(shop -> mtx_items_combs > 0,"mtx_items_combs semaphore not created");
+   ensure(shop -> mtx_items_razors > 0, "mtx_items_razors semaphore not created");
 
    /* post-conditions for sync semaphores */
    ensure(shop -> sem_num_clients_in_benches > 0, "sem_num_clients_in_benches semaphore not created");
    ensure(shop -> sem_num_free_benches_pos > 0, "sem_num_benches_pos semaphore not created");
    ensure(shop -> sem_client_to_barber_ids > 0, "sem_client_to_barber_ids semaphore not created");
    ensure(shop -> sem_service_announce > 0, "sem_client_to_barber_ids semaphore not created");
+   ensure(shop -> sem_service_completion > 0, "sem_client_to_barber_ids semaphore not created");
+   ensure(shop -> sem_num_washbasins > 0, "sem_num_washbasins semaphore not created");
+   ensure(shop -> sem_num_barber_chairs > 0, "sem_num_washbasins semaphore not created");
+   ensure(shop -> sem_client_leave_shop > 0, "sem_num_washbasins semaphore not created");
+   ensure(shop -> sem_num_items_scissors > 0, "sem_num_items_scissors semaphore not created");
+   ensure(shop -> sem_num_items_combs > 0, "sem_num_items_combs semaphore not created");
+   ensure(shop -> sem_num_items_razors > 0, "sem_num_items_razors semaphore not created");
+   ensure(shop -> sem_barber_requests_done > 0, "sem_barber_requests_done semaphore not created");
+   ensure(shop -> sem_ready > 0, "sem_barber_requests_done semaphore not created");
 }
 
 /* semaphores destruction */
@@ -127,12 +204,27 @@ void shop_sems_destroy(BarberShop* shop)
    psemctl(shop -> mtx_barber_benches , 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> mtx_clients_to_barbers_ids, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_service_to_client, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_washbasins, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_barber_chairs, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_items_scissors, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_items_combs, 0, IPC_RMID, NULL);
+   psemctl(shop -> mtx_items_razors, 0, IPC_RMID, NULL);
    
    /* destroy sync semaphores */
    psemctl(shop -> sem_num_clients_in_benches, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_num_free_benches_pos, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_client_to_barber_ids, 0, IPC_RMID, NULL);
    psemctl(shop -> sem_service_announce, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_service_completion, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_washbasins, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_barber_chairs, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_client_leave_shop, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_items_scissors, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_items_combs, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_num_items_razors, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_barber_requests_done, 0, IPC_RMID, NULL);
+   psemctl(shop -> sem_ready, 0, IPC_RMID, NULL);
 }
 
 // #############################################################################
@@ -352,6 +444,7 @@ void close_shop(BarberShop *shop)
    require(shop != NULL, "shop argument required");
    require(shop_opened(shop), "barber shop already closed");
 
+   debug_function_run_log(shop -> logId, 0, "Closing shop");
    shop->opened = 0;
 }
 
@@ -385,7 +478,6 @@ int reserve_random_empty_barber_chair(BarberShop* shop, int barberID)
    return res;
 }
 
-// TODO might have to be changed
 int num_available_washbasin(BarberShop* shop)
 {
    require (shop != NULL, "shop argument required");
@@ -398,7 +490,6 @@ int num_available_washbasin(BarberShop* shop)
    return res;
 }
 
-// TODO might have to be changed
 int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -422,7 +513,6 @@ int reserve_random_empty_washbasin(BarberShop* shop, int barberID)
    return res;
 }
 
-// TODO might have to be changed
 int is_client_inside(BarberShop* shop, int clientID)
 {
    require (shop != NULL, "shop argument required");
@@ -436,7 +526,6 @@ int is_client_inside(BarberShop* shop, int clientID)
    return res;
 }
 
-// TODO not done
 Service wait_service_from_barber(BarberShop* shop, int barberID)
 {
    /** TODO:
@@ -446,35 +535,35 @@ Service wait_service_from_barber(BarberShop* shop, int barberID)
    require (shop != NULL, "shop argument required");
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
 
-   down(shop -> sem_service_announce);
-
-   //lock(shop->mtx_shop);
+   /* update sync semaphore */
+   down(shop -> sem_service_announce, barberID-1);
+   
+   lock(shop -> mtx_service_to_client);
    Service res = get_service(shop, barberID-1);
+   unlock(shop -> mtx_service_to_client);
 
-   //unlock(shop->mtx_shop);
    return res;
 }
 
-// TODO not done
 void inform_client_on_service(BarberShop* shop, Service service)
 {
    /** TODO:
     * function called from a barber, expecting to inform a client of its next service
     **/
 
-   //lock(shop->mtx_shop);
+   lock(shop -> mtx_service_to_client);
    set_service(shop, service_barber_id(&service) - 1, &service);
-   //unlock(shop->mtx_shop);
+   unlock(shop -> mtx_service_to_client);
 
-   up(shop -> sem_service_announce);
+   /* update sync semaphore */
+   up(shop -> sem_service_announce, ((&service)->barberID)-1);
 
-   send_log(shop->logId,concat_6str("Service ", int2str(service.request), " going to be performed on client ", int2str(service.clientID), " by barber ", int2str(service.barberID)));
+   debug_function_run_log(shop->logId, 0, concat_6str("Service ", int2str(service.request), " going to be performed on client ", int2str(service.clientID), " by barber ", int2str(service.barberID)));
 
    require (shop != NULL, "shop argument required");
 
 }
 
-// TODO not done
 void client_done(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -483,18 +572,18 @@ void client_done(BarberShop* shop, int clientID)
 
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
-   send_log(shop->logId,concat_3str("Client ",int2str(clientID), " is done"));
+
+   up(shop -> sem_client_leave_shop);
+   
+   debug_function_run_log(shop->logId, 0, concat_3str("Client ",int2str(clientID), " is done"));
 
 }
 
-// TODO might have to be changed
 int enter_barber_shop(BarberShop* shop, int clientID, int request)
 {
    /** TODO:
     * Function called from a client when entering the barbershop
     **/
-
-   //printf("\n\n\n\n\n\n\n---------------------\n\n\n\nHELLO ENTER BARBER SHOP");
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
    require (request > 0 && request < 8, concat_3str("invalid request (", int2str(request), ")"));
@@ -502,22 +591,12 @@ int enter_barber_shop(BarberShop* shop, int clientID, int request)
    require(num_available_benches_seats(client_benches(shop)) > 0, "empty seat not available in client benches");
    require (!is_client_inside(shop, clientID), concat_3str("client ", int2str(clientID), " already inside barber shop"));
 
-   //send_log(shop->logId, concat_2str("\nBEFORE RANDOM SIT\nQUEUE SIZE IN ENTER BARBER SHOP? ", int2str(shop->clientBenches.queue.size)));
-   //printf("\nRANDOM SIT");
-
-   //log_client_benches(&shop->clientBenches);
-
    int res = random_sit_in_client_benches(&shop->clientBenches, clientID, request);
-   
-   //send_log(shop->logId, concat_2str("\nAFTER RANDOM SIT\nQUEUE SIZE IN ENTER BARBER SHOP? ", int2str(shop->clientBenches.queue.size)));
-
    shop -> clientsInside[shop->numClientsInside++] = clientID;
    
-
    return res;
 }
 
-// TODO might have to be changed
 void leave_barber_shop(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -537,7 +616,6 @@ void leave_barber_shop(BarberShop* shop, int clientID)
       shop->clientsInside[i] = shop->clientsInside[i+1];
 }
 
-// TODO
 void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
 {
    /** TODO:
@@ -548,20 +626,22 @@ void receive_and_greet_client(BarberShop *shop, int barberID, int clientID)
    require (barberID > 0, concat_3str("invalid barber id (", int2str(barberID), ")"));
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
-   send_log(shop->logId, (char*)"[receive_and_greet_client] before lock");
+   /* critical zone: 2+ barbers trying to receive a client */
+   debug_function_run_log(shop->logId, 0, "Critical zone! Before lock");
+   lock(shop -> mtx_clients_to_barbers_ids);                                    // !LOCK
    
-   // !Critical area. A client can be trying to greet a barber
-   lock(shop -> mtx_clients_to_barbers_ids);                                  // !LOCK
    shop -> barber_to_client_ids[clientID] = barberID;
-   unlock(shop -> mtx_clients_to_barbers_ids);                                // !UNLOCK
    
-   send_log(shop->logId, (char*)"[receive_and_greet_client] after lock");
+   unlock(shop -> mtx_clients_to_barbers_ids);                                  // !UNLOCK
    
+   debug_function_run_log(shop->logId, 0, "End of critical zone! After lock");
+   
+   /* update sync semaphore */
    up(shop -> sem_client_to_barber_ids, clientID);
 
+   /* at this point, a client can greet the barber */
 }
 
-// TODO 
 int greet_barber(BarberShop* shop, int clientID)
 {
    /** TODO:
@@ -571,17 +651,24 @@ int greet_barber(BarberShop* shop, int clientID)
    require (shop != NULL, "shop argument required");
    require (clientID > 0, concat_3str("invalid client id (", int2str(clientID), ")"));
 
+   debug_function_run_log(shop->logId, 0, concat_2str("Client id is ", int2str(clientID)));
+   
+   /* update sync semaphore */
    down(shop -> sem_client_to_barber_ids, clientID);
+   
+   /* at this point, a client can greet the barber */
+
    int res = 0;
-   send_log(shop->logId, (char*)"[greet_barber] before lock");
-   lock(shop -> mtx_clients_to_barbers_ids);                                  // !LOCK                    
+   
+   /* critical zone : 2+ clients trying to access the client_to_barbers info */
+   debug_function_run_log(shop->logId, 0, "Critical zone! Before lock");
+   lock(shop -> mtx_clients_to_barbers_ids);                                    // !LOCK                    
+   
    res = shop-> barber_to_client_ids[clientID]; // should be okay, the problem is in the function above
 
-   unlock(shop -> mtx_clients_to_barbers_ids);                                // !UNLOCK 
-   send_log(shop->logId, (char*)"[greet_barber] after lock");
+   unlock(shop -> mtx_clients_to_barbers_ids);                                  // !UNLOCK 
+   debug_function_run_log(shop->logId, 0, concat_2str("End of critical zone! After lock. Barber id for the client is ", int2str(res)));
 
-   send_log(shop->logId, concat_3str("[greet_barber] after gettting the id (", int2str(res), ")"));
    ensure (res > 0, concat_3str("invalid barber id (", int2str(res), ")"));
-
    return res;
 }
